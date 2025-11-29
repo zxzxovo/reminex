@@ -266,82 +266,68 @@ mod tests {
     use std::fs::File;
     use rusqlite::Connection;
 
-    fn setup_test_dir() -> PathBuf {
-        let temp_dir = std::env::temp_dir().join("reminex_test");
-        
-        // Clean up if exists
-        let _ = fs::remove_dir_all(&temp_dir);
+    fn setup_test_dir() -> tempfile::TempDir {
+        let temp_dir = tempfile::tempdir().unwrap();
         
         // Create test directory structure
-        fs::create_dir_all(&temp_dir).unwrap();
-        fs::create_dir_all(temp_dir.join("subdir")).unwrap();
+        fs::create_dir_all(temp_dir.path().join("subdir")).unwrap();
         
         // Create test files
-        File::create(temp_dir.join("test1.reminex.db")).unwrap();
-        File::create(temp_dir.join("test2.reminex.db")).unwrap();
-        File::create(temp_dir.join("other.txt")).unwrap();
-        File::create(temp_dir.join("subdir/nested.reminex.db")).unwrap();
+        File::create(temp_dir.path().join("test1.reminex.db")).unwrap();
+        File::create(temp_dir.path().join("test2.reminex.db")).unwrap();
+        File::create(temp_dir.path().join("other.txt")).unwrap();
+        File::create(temp_dir.path().join("subdir/nested.reminex.db")).unwrap();
         
         temp_dir
-    }
-
-    fn cleanup_test_dir(dir: &Path) {
-        let _ = fs::remove_dir_all(dir);
     }
 
     #[test]
     fn test_single_db_file() {
         let temp_dir = setup_test_dir();
-        let db_file = temp_dir.join("test1.reminex.db");
+        let db_file = temp_dir.path().join("test1.reminex.db");
         
         let result = get_db_files(vec![&db_file]);
         
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], db_file);
-        
-        cleanup_test_dir(&temp_dir);
     }
 
     #[test]
     fn test_non_db_file() {
         let temp_dir = setup_test_dir();
-        let other_file = temp_dir.join("other.txt");
+        let other_file = temp_dir.path().join("other.txt");
         
         let result = get_db_files(vec![&other_file]);
         
         assert_eq!(result.len(), 0);
-        
-        cleanup_test_dir(&temp_dir);
     }
 
     #[test]
     fn test_directory_scan() {
         let temp_dir = setup_test_dir();
         
-        let result = get_db_files(vec![&temp_dir]);
+        let result = get_db_files(vec![temp_dir.path()]);
         
         // Should find test1.reminex.db and test2.reminex.db
         // Should NOT find subdir/nested.reminex.db (not one level deep)
         assert_eq!(result.len(), 2);
         assert!(result.iter().any(|p| p.file_name().unwrap() == "test1.reminex.db"));
         assert!(result.iter().any(|p| p.file_name().unwrap() == "test2.reminex.db"));
-        
-        cleanup_test_dir(&temp_dir);
     }
+
 
     #[test]
     fn test_mixed_paths() {
         let temp_dir = setup_test_dir();
-        let db_file = temp_dir.join("test1.reminex.db");
+        let db_file = temp_dir.path().join("test1.reminex.db");
         
-        let result = get_db_files(vec![&temp_dir, &db_file]);
+        let result = get_db_files(vec![temp_dir.path(), &db_file]);
         
         // Should find test1.reminex.db and test2.reminex.db from directory
         // Plus test1.reminex.db from direct file path (might be duplicate)
         assert!(result.len() >= 2);
-        
-        cleanup_test_dir(&temp_dir);
     }
+
 
     #[test]
     fn test_nonexistent_path() {
