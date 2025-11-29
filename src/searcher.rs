@@ -398,8 +398,10 @@ mod tests {
         let (_temp, db) = create_test_db_with_data();
         
         // Test max_results limit
-        let mut config = SearchConfig::default();
-        config.max_results = 1;
+        let config = SearchConfig {
+            max_results: 1,
+            ..Default::default()
+        };
         let results = search_by_keyword(&db, "summer", &config).unwrap();
         assert_eq!(results.len(), 1);
     }

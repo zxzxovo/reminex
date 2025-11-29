@@ -206,10 +206,10 @@ pub fn get_db_files<P: AsRef<Path>>(paths: Vec<P>) -> Vec<PathBuf> {
 
         if path.is_file() {
             // Check if the file has .reminex.db extension
-            if let Some(file_name) = path.file_name() {
-                if file_name.to_string_lossy().ends_with(".reminex.db") {
-                    db_files.push(path.to_path_buf());
-                }
+            if let Some(file_name) = path.file_name()
+                && file_name.to_string_lossy().ends_with(".reminex.db")
+            {
+                db_files.push(path.to_path_buf());
             }
         } else if path.is_dir() {
             // Read directory entries (one level deep only)
@@ -218,12 +218,11 @@ pub fn get_db_files<P: AsRef<Path>>(paths: Vec<P>) -> Vec<PathBuf> {
                     let entry_path = entry.path();
                     
                     // Only process files, not subdirectories
-                    if entry_path.is_file() {
-                        if let Some(file_name) = entry_path.file_name() {
-                            if file_name.to_string_lossy().ends_with(".reminex.db") {
-                                db_files.push(entry_path);
-                            }
-                        }
+                    if entry_path.is_file()
+                        && let Some(file_name) = entry_path.file_name()
+                        && file_name.to_string_lossy().ends_with(".reminex.db")
+                    {
+                        db_files.push(entry_path);
                     }
                 }
             }
