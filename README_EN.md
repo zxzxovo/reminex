@@ -32,6 +32,7 @@
 - **🌳 Tree Display**: Hierarchical directory tree visualization with automatic common path prefix detection
 - **🔄 Incremental Updates**: Support for both full and incremental indexing modes
 - **💬 Interactive Search**: Built-in interactive search interface
+- **📋 Progress Display**: Real-time indexing progress and speed display for clear status tracking
 - **⚙️ Database Optimization**: WAL mode + 2GB cache + batch transaction processing
 
 ---
@@ -146,6 +147,7 @@ src/
 - **Database**: rusqlite 0.37.0
 - **Parallelism**: rayon 1.11.0
 - **Channels**: crossbeam-channel 0.5.15
+- **Progress**: indicatif 0.17.10
 - **CLI**: clap 4.5.53
 - **Error Handling**: anyhow 1.0.100
 
@@ -186,8 +188,8 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ## 🔮 Roadmap
 
+- [x] Progress bar display (using indicatif) ✅
 - [ ] Incremental update optimization (based on mtime comparison)
-- [ ] Progress bar display (using indicatif)
 - [ ] Configuration file support (TOML)
 - [ ] Web interface
 - [ ] Full-text content search

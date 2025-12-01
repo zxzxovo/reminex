@@ -1,8 +1,11 @@
 use anyhow::{Context, Result};
 use crossbeam_channel::{Sender, bounded};
+use indicatif::{ProgressBar, ProgressStyle};
 use rayon::prelude::*;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime};
 
 use crate::db::{Database, Index};
@@ -27,15 +30,35 @@ pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> R
         anyhow::bail!("Root path does not exist: {}", root.display());
     }
 
+    // Create progress bar
+    let progress = Arc::new(ProgressBar::new_spinner());
+    progress.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.green} [{elapsed_precise}] {msg} {pos} 个文件")
+            .unwrap(),
+    );
+    progress.set_message("扫描中");
+
+    let counter = Arc::new(AtomicU64::new(0));
+
     // Channel for collecting indices from parallel workers
     let (tx, rx) = bounded::<Index>(batch_size * 2);
 
     // Clone db for the writer thread
     let db_clone = db.clone();
+    let progress_clone = progress.clone();
+    let counter_clone = counter.clone();
 
     // Spawn writer thread to batch insert indices
-    let writer_handle =
-        std::thread::spawn(move || write_indices_batched(rx, &db_clone, batch_size));
+    let writer_handle = std::thread::spawn(move || {
+        write_indices_batched_with_progress(
+            rx,
+            &db_clone,
+            batch_size,
+            progress_clone,
+            counter_clone,
+        )
+    });
 
     // Parallel scanning
     let scan_result = scan_directory_parallel(root, tx);
@@ -47,6 +70,8 @@ pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> R
 
     scan_result?;
     write_result?;
+
+    progress.finish_with_message("完成");
 
     Ok(start.elapsed())
 }
@@ -75,11 +100,31 @@ pub fn scan_idxs_with_metadata<P: AsRef<Path>>(
         anyhow::bail!("Root path does not exist: {}", root.display());
     }
 
+    // Create progress bar
+    let progress = Arc::new(ProgressBar::new_spinner());
+    progress.set_style(
+        ProgressStyle::default_spinner()
+            .template("{spinner:.green} [{elapsed_precise}] {msg} {pos} 个文件")
+            .unwrap(),
+    );
+    progress.set_message("扫描中 (含元数据)");
+
+    let counter = Arc::new(AtomicU64::new(0));
+
     let (tx, rx) = bounded::<Index>(batch_size * 2);
     let db_clone = db.clone();
+    let progress_clone = progress.clone();
+    let counter_clone = counter.clone();
 
-    let writer_handle =
-        std::thread::spawn(move || write_indices_batched(rx, &db_clone, batch_size));
+    let writer_handle = std::thread::spawn(move || {
+        write_indices_batched_with_progress(
+            rx,
+            &db_clone,
+            batch_size,
+            progress_clone,
+            counter_clone,
+        )
+    });
 
     let scan_result = scan_directory_parallel_with_metadata(root, tx);
 
@@ -89,6 +134,8 @@ pub fn scan_idxs_with_metadata<P: AsRef<Path>>(
 
     scan_result?;
     write_result?;
+
+    progress.finish_with_message("完成");
 
     Ok(start.elapsed())
 }
@@ -184,7 +231,8 @@ fn extract_metadata<P: AsRef<Path>>(path: P) -> Result<(f64, i64)> {
     Ok((mtime, size))
 }
 
-/// Batches indices and writes them to database.
+/// Batches indices and writes them to database (used in tests).
+#[allow(dead_code)]
 fn write_indices_batched(
     rx: crossbeam_channel::Receiver<Index>,
     db: &Database,
@@ -206,6 +254,41 @@ fn write_indices_batched(
     if !batch.is_empty() {
         db.add_idxs(&batch)
             .context("Failed to write final batch to database")?;
+    }
+
+    Ok(())
+}
+
+/// Batches indices and writes them to database with progress tracking.
+fn write_indices_batched_with_progress(
+    rx: crossbeam_channel::Receiver<Index>,
+    db: &Database,
+    batch_size: usize,
+    progress: Arc<ProgressBar>,
+    counter: Arc<AtomicU64>,
+) -> Result<()> {
+    let mut batch = Vec::with_capacity(batch_size);
+
+    for idx in rx {
+        batch.push(idx);
+
+        if batch.len() >= batch_size {
+            db.add_idxs(&batch)
+                .context("Failed to write batch to database")?;
+
+            let count =
+                counter.fetch_add(batch.len() as u64, Ordering::Relaxed) + batch.len() as u64;
+            progress.set_position(count);
+            batch.clear();
+        }
+    }
+
+    // Write remaining indices
+    if !batch.is_empty() {
+        db.add_idxs(&batch)
+            .context("Failed to write final batch to database")?;
+        let count = counter.fetch_add(batch.len() as u64, Ordering::Relaxed) + batch.len() as u64;
+        progress.set_position(count);
     }
 
     Ok(())

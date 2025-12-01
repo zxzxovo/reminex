@@ -28,6 +28,21 @@
 
 ## 📸 Screenshots
 
+### 索引进度显示
+```
+$ reminex index -p /data -d myfiles.db --full
+📁 索引目录: /data
+💾 数据库文件: myfiles.db
+🚀 开始扫描...
+   批量大小: 5000
+   模式: 完整扫描（含元数据）
+⏳ [00:00:15] 扫描中 (含元数据) 12589 个文件
+✅ 索引完成！
+   耗时: 15.42s
+   文件数: 12589
+   速度: 816 文件/秒
+```
+
 ### 基础搜索
 ```
 $ reminex search -d myfiles.reminex.db photo
@@ -98,6 +113,7 @@ $ reminex search -d myfiles.reminex.db
 - **🌳 树形展示**：搜索结果支持层级目录树状显示，自动识别公共路径前缀
 - **🔄 增量更新**：支持全量和增量两种索引模式
 - **💬 交互式搜索**：内置交互式搜索界面，无需重复输入数据库路径
+- **📋 进度显示**：实时显示索引进度和速度，清晰了解扫描状态
 - **⚙️ 数据库优化**：WAL 模式 + 2GB 缓存 + 批量事务处理
 
 ## 💡 使用场景
@@ -413,6 +429,7 @@ pub fn print_tree(
 | 数据库 | rusqlite | 0.37.0 | SQLite 绑定 |
 | 并行处理 | rayon | 1.11.0 | 数据并行 |
 | 通道通信 | crossbeam-channel | 0.5.15 | MPSC 通道 |
+| 进度显示 | indicatif | 0.17.10 | 进度条 |
 | CLI 解析 | clap | 4.5.53 | 命令行参数 |
 | 错误处理 | anyhow | 1.0.100 | 错误传播 |
 | 测试工具 | tempfile | 3.23.0 | 临时目录 |
@@ -656,8 +673,8 @@ reminex index -p /path -d myfiles_new.db --full
 
 ## 🔮 未来计划
 
+- [x] 进度条显示（使用 indicatif） ✅
 - [ ] 增量更新优化（基于 mtime 比较）
-- [ ] 进度条显示（使用 indicatif）
 - [ ] 配置文件支持（TOML）
 - [ ] Web 界面
 - [ ] 文件内容全文搜索

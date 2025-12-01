@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Nothing yet
+- Real-time progress bar display during indexing using indicatif
+- File count and scanning speed shown in progress indicator
+- Visual feedback for both fast and full metadata scanning modes
 
 ### Changed
 - Nothing yet
