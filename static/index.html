@@ -282,6 +282,12 @@
                     <input type="number" id="limitInput" value="2000" min="1" max="10000" 
                            style="width: 80px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;">
                 </div>
+                <div class="option">
+                    <label for="rootPathInput">显示根路径:</label>
+                    <input type="text" id="rootPathInput" placeholder="如: D:\ 或 /mnt/data" 
+                           style="width: 180px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
+                           title="可选：替换显示结果中的原始根路径（支持盘符替换）">
+                </div>
                 <div style="margin-left: auto;">
                     <a href="/indexer" class="nav-button">📑 创建索引</a>
                 </div>
@@ -304,6 +310,7 @@
         const nameOnlyCheckbox = document.getElementById('nameOnly');
         const caseSensitiveCheckbox = document.getElementById('caseSensitive');
         const limitInput = document.getElementById('limitInput');
+        const rootPathInput = document.getElementById('rootPathInput');
 
         // Search on Enter key
         searchInput.addEventListener('keypress', (e) => {
@@ -335,6 +342,12 @@
                     case_sensitive: caseSensitiveCheckbox.checked,
                     limit: limitInput.value
                 });
+
+                // Add root_path if specified
+                const rootPath = rootPathInput.value.trim();
+                if (rootPath) {
+                    params.append('root_path', rootPath);
+                }
 
                 const response = await fetch(`/api/search?${params}`);
                 const data = await response.json();

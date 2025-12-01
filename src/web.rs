@@ -6,13 +6,13 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tower_http::services::ServeDir;
 
 use crate::db::Database;
 use crate::indexer;
-use crate::searcher::{SearchConfig, TreeNode, build_tree, search_from_input};
+use crate::searcher::{SearchConfig, SearchResult, TreeNode, build_tree, search_from_input};
 
 /// Web server state
 #[derive(Clone)]
@@ -30,6 +30,8 @@ pub struct SearchRequest {
     pub name_only: bool,
     #[serde(default)]
     pub case_sensitive: bool,
+    #[serde(default)]
+    pub root_path: Option<String>,
 }
 
 /// Search response to web client
@@ -97,6 +99,84 @@ impl From<&TreeNode> for TreeNodeJson {
     }
 }
 
+/// Apply root path replacement to search results
+/// 
+/// This function replaces the original root path in database with a new one.
+/// Useful when database is moved between different machines or mount points.
+/// 
+/// For Windows: Supports drive letter replacement (e.g., F:\ -> D:\)
+/// For all systems: Supports full path prefix replacement
+fn apply_root_path_replacement(
+    results: Vec<(String, Vec<SearchResult>)>,
+    new_root: &str,
+) -> Vec<(String, Vec<SearchResult>)> {
+    // Try to detect the common prefix from the first result
+    let common_prefix = results
+        .iter()
+        .flat_map(|(_, items)| items.first())
+        .map(|item| &item.path)
+        .next()
+        .and_then(|first_path| detect_root_prefix(first_path));
+
+    if common_prefix.is_none() {
+        return results; // No results or couldn't detect prefix
+    }
+
+    let old_prefix = common_prefix.unwrap();
+    let new_root = new_root.trim_end_matches(['/', '\\']);
+
+    results
+        .into_iter()
+        .map(|(keyword, items)| {
+            let replaced_items = items
+                .into_iter()
+                .map(|mut item| {
+                    item.path = replace_path_prefix(&item.path, &old_prefix, new_root);
+                    item
+                })
+                .collect();
+            (keyword, replaced_items)
+        })
+        .collect()
+}
+
+/// Detect the root prefix from a file path
+/// For Windows: Returns drive letter + colon (e.g., "F:")
+/// For Unix-like: Returns the first path component
+fn detect_root_prefix(path: &str) -> Option<String> {
+    // Windows drive letter detection
+    if path.len() >= 2 && path.chars().nth(1) == Some(':') {
+        let drive = path.chars().next()?;
+        if drive.is_ascii_alphabetic() {
+            return Some(format!("{}:", drive.to_ascii_uppercase()));
+        }
+    }
+
+    // Unix-like: try to get the first component
+    let path_obj = Path::new(path);
+    path_obj
+        .components()
+        .next()
+        .map(|c| c.as_os_str().to_string_lossy().to_string())
+}
+
+/// Replace the prefix of a path
+fn replace_path_prefix(path: &str, old_prefix: &str, new_prefix: &str) -> String {
+    if path.starts_with(old_prefix) {
+        // Handle both forward and backward slashes
+        let remainder = &path[old_prefix.len()..];
+        let remainder = remainder.trim_start_matches(['/', '\\']);
+        
+        if remainder.is_empty() {
+            new_prefix.to_string()
+        } else {
+            format!("{}\\{}", new_prefix, remainder)
+        }
+    } else {
+        path.to_string()
+    }
+}
+
 /// Search handler
 async fn search_handler(
     State(state): State<Arc<AppState>>,
@@ -124,9 +204,16 @@ async fn search_handler(
         }
     };
 
+    // Apply root path replacement if specified
+    let processed_results = if let Some(ref new_root) = params.root_path {
+        apply_root_path_replacement(results, new_root)
+    } else {
+        results
+    };
+
     // Build trees for each keyword
     let mut keyword_results = Vec::new();
-    for (keyword, items) in results {
+    for (keyword, items) in processed_results {
         if items.is_empty() {
             keyword_results.push(KeywordResults {
                 keyword,
