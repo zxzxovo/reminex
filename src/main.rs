@@ -6,15 +6,17 @@ use std::path::PathBuf;
 use reminex::db::Database;
 use reminex::indexer::{scan_idxs, scan_idxs_with_metadata};
 use reminex::searcher::{SearchConfig, build_tree, print_tree, search_from_input};
+use reminex::web;
 
-fn main() {
-    if let Err(e) = run() {
+#[tokio::main]
+async fn main() {
+    if let Err(e) = run().await {
         eprintln!("错误: {:#}", e);
         std::process::exit(1);
     }
 }
 
-fn run() -> Result<()> {
+async fn run() -> Result<()> {
     let app = App::parse();
 
     match app.commands {
@@ -23,6 +25,9 @@ fn run() -> Result<()> {
         }
         Commands::Search(args) | Commands::S(args) => {
             handle_search_command(args)?;
+        }
+        Commands::Web(args) | Commands::W(args) => {
+            handle_web_command(args).await?;
         }
     }
 
@@ -190,6 +195,23 @@ fn perform_search(
     Ok(())
 }
 
+async fn handle_web_command(args: WebArgs) -> Result<()> {
+    let db_path = args.db.unwrap_or_else(|| PathBuf::from("./.reminex.db"));
+    
+    if !db_path.exists() {
+        anyhow::bail!("数据库文件不存在: {}\n请先运行索引命令创建数据库", db_path.display());
+    }
+    
+    println!("🌐 启动 Web 服务器");
+    println!("📂 数据库: {}", db_path.display());
+    println!("🔗 地址: http://localhost:{}", args.port);
+    println!();
+    
+    web::run_server(db_path, args.port).await?;
+    
+    Ok(())
+}
+
 #[derive(Parser)]
 #[command(name = "reminex")]
 #[command(about = "快速文件索引和搜索工具", long_about = None)]
@@ -212,6 +234,12 @@ enum Commands {
 
     #[command(about = "搜索文件 (search 简写)")]
     S(SearchArgs),
+
+    #[command(about = "Web 界面服务器 (web)")]
+    Web(WebArgs),
+
+    #[command(about = "Web 界面服务器 (web 简写)")]
+    W(WebArgs),
 }
 
 #[derive(Args, Clone)]
@@ -254,4 +282,13 @@ struct SearchArgs {
 
     #[arg(long, help = "树形显示的根目录名称", default_value = "搜索结果")]
     root_name: Option<String>,
+}
+
+#[derive(Args, Clone)]
+struct WebArgs {
+    #[arg(short, long, help = "数据库文件路径")]
+    db: Option<PathBuf>,
+
+    #[arg(short, long, help = "Web 服务器端口", default_value = "3000")]
+    port: u16,
 }

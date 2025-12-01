@@ -11,9 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time progress bar display during indexing using indicatif
 - File count and scanning speed shown in progress indicator
 - Visual feedback for both fast and full metadata scanning modes
+- **Web interface with modern UI**
+  - Tree-style search results display
+  - Multi-keyword search support
+  - Real-time search with visual feedback
+  - Responsive design with gradient styling
+  - REST API endpoint for search queries
+- **New `web` command** to start HTTP server
+  - Default port: 3000
+  - Async server using Axum and Tokio
+  - JSON API for frontend communication
 
 ### Changed
-- Nothing yet
+- Updated main.rs to async/await pattern for web server support
+- Added web module with HTTP handlers and JSON serialization
 
 ### Deprecated
 - Nothing yet

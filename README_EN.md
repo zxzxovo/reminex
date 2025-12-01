@@ -33,6 +33,7 @@
 - **🔄 Incremental Updates**: Support for both full and incremental indexing modes
 - **💬 Interactive Search**: Built-in interactive search interface
 - **📋 Progress Display**: Real-time indexing progress and speed display for clear status tracking
+- **🌐 Web Interface**: Modern Web UI with tree-style results display, no command line required
 - **⚙️ Database Optimization**: WAL mode + 2GB cache + batch transaction processing
 
 ---
@@ -189,9 +190,10 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 ## 🔮 Roadmap
 
 - [x] Progress bar display (using indicatif) ✅
+- [x] Web interface (basic features) ✅
 - [ ] Incremental update optimization (based on mtime comparison)
 - [ ] Configuration file support (TOML)
-- [ ] Web interface
+- [ ] Web interface enhancements (search history, bookmarks, multi-database switching)
 - [ ] Full-text content search
 - [ ] Export results (CSV/JSON)
 - [ ] Multi-database merged queries

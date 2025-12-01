@@ -28,6 +28,22 @@
 
 ## 📸 Screenshots
 
+### Web 界面
+```
+# 启动 Web 服务器
+$ reminex web -d myfiles.reminex.db
+🌐 启动 Web 服务器
+📂 数据库: myfiles.reminex.db
+🔗 地址: http://localhost:3000
+
+# 在浏览器中访问 http://localhost:3000
+# 现代化的 Web 界面，支持：
+# - 多关键词搜索
+# - 树形结果展示
+# - 实时搜索
+# - 响应式设计
+```
+
 ### 索引进度显示
 ```
 $ reminex index -p /data -d myfiles.db --full
@@ -360,7 +376,10 @@ src/
 ├── lib.rs        # 库导出
 ├── db.rs         # 数据库抽象层
 ├── indexer.rs    # 并行索引扫描
-└── searcher.rs   # 搜索与展示
+├── searcher.rs   # 搜索与展示
+└── web.rs        # Web 服务器
+static/
+└── index.html    # Web 界面前端
 ```
 
 ### 核心模块
@@ -430,8 +449,11 @@ pub fn print_tree(
 | 并行处理 | rayon | 1.11.0 | 数据并行 |
 | 通道通信 | crossbeam-channel | 0.5.15 | MPSC 通道 |
 | 进度显示 | indicatif | 0.17.10 | 进度条 |
+| Web 框架 | axum | 0.7.9 | HTTP 服务器 |
+| 异步运行时 | tokio | 1.42 | 异步执行 |
 | CLI 解析 | clap | 4.5.53 | 命令行参数 |
 | 错误处理 | anyhow | 1.0.100 | 错误传播 |
+| 序列化 | serde | 1.0 | JSON 序列化 |
 | 测试工具 | tempfile | 3.23.0 | 临时目录 |
 
 ## 🧪 测试
@@ -674,9 +696,10 @@ reminex index -p /path -d myfiles_new.db --full
 ## 🔮 未来计划
 
 - [x] 进度条显示（使用 indicatif） ✅
+- [x] Web 界面（基础功能） ✅
 - [ ] 增量更新优化（基于 mtime 比较）
 - [ ] 配置文件支持（TOML）
-- [ ] Web 界面
+- [ ] Web 界面增强（搜索历史、收藏夹、多数据库切换）
 - [ ] 文件内容全文搜索
 - [ ] 导出搜索结果（CSV/JSON）
 - [ ] 多数据库合并查询
