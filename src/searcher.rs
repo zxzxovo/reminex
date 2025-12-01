@@ -52,6 +52,10 @@ pub struct SearchConfig {
     pub search_in_path: bool,
     /// Case sensitive search
     pub case_sensitive: bool,
+    /// Include only results containing these keywords (AND logic)
+    pub include_filters: Vec<String>,
+    /// Exclude results containing these keywords (OR logic)
+    pub exclude_filters: Vec<String>,
 }
 
 impl Default for SearchConfig {
@@ -60,6 +64,8 @@ impl Default for SearchConfig {
             max_results: 2000,
             search_in_path: true,
             case_sensitive: false,
+            include_filters: Vec::new(),
+            exclude_filters: Vec::new(),
         }
     }
 }
@@ -87,6 +93,62 @@ pub fn parse_search_keywords(input: &str) -> Vec<String> {
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
+        .collect()
+}
+
+/// Apply include and exclude filters to search results.
+///
+/// # Arguments
+/// * `results` - Search results to filter
+/// * `config` - Search configuration containing filters
+///
+/// # Returns
+/// Filtered search results
+///
+/// # Logic
+/// - Include filters: Result must contain ALL include keywords (AND logic)
+/// - Exclude filters: Result must NOT contain ANY exclude keywords (OR logic)
+fn apply_filters(results: Vec<SearchResult>, config: &SearchConfig) -> Vec<SearchResult> {
+    if config.include_filters.is_empty() && config.exclude_filters.is_empty() {
+        return results;
+    }
+
+    results
+        .into_iter()
+        .filter(|result| {
+            // Combine path and name for filtering
+            let full_text = if config.case_sensitive {
+                format!("{} {}", result.path, result.name)
+            } else {
+                format!("{} {}", result.path, result.name).to_lowercase()
+            };
+
+            // Check include filters (must match ALL)
+            let includes_match = if config.include_filters.is_empty() {
+                true
+            } else {
+                config.include_filters.iter().all(|filter| {
+                    let filter_text = if config.case_sensitive {
+                        filter.clone()
+                    } else {
+                        filter.to_lowercase()
+                    };
+                    full_text.contains(&filter_text)
+                })
+            };
+
+            // Check exclude filters (must NOT match ANY)
+            let excludes_match = config.exclude_filters.iter().any(|filter| {
+                let filter_text = if config.case_sensitive {
+                    filter.clone()
+                } else {
+                    filter.to_lowercase()
+                };
+                full_text.contains(&filter_text)
+            });
+
+            includes_match && !excludes_match
+        })
         .collect()
 }
 
@@ -139,7 +201,7 @@ pub fn search_by_keyword(
         }
 
         Ok(results)
-    })
+    }).map(|results| apply_filters(results, config))
 }
 
 /// Searches for files matching multiple keywords.

@@ -117,6 +117,8 @@ fn handle_search_command(args: SearchArgs) -> Result<()> {
         max_results: args.limit.unwrap_or(2000),
         search_in_path: !args.name_only,
         case_sensitive: args.case_sensitive,
+        include_filters: Vec::new(),
+        exclude_filters: Vec::new(),
     };
 
     // 如果提供了关键词，直接搜索

@@ -32,6 +32,10 @@ pub struct SearchRequest {
     pub case_sensitive: bool,
     #[serde(default)]
     pub root_path: Option<String>,
+    #[serde(default)]
+    pub include_filters: Option<String>,
+    #[serde(default)]
+    pub exclude_filters: Option<String>,
 }
 
 /// Search response to web client
@@ -99,6 +103,16 @@ impl From<&TreeNode> for TreeNodeJson {
             children: node.children.iter().map(TreeNodeJson::from).collect(),
         }
     }
+}
+
+/// Parse filter keywords from a string (comma or space separated)
+fn parse_filter_keywords(input: &str) -> Vec<String> {
+    input
+        .split([',', '，', ';', '；'])
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
 }
 
 /// Apply root path replacement to search results
@@ -191,6 +205,16 @@ async fn search_handler(
         max_results: params.limit.unwrap_or(2000),
         search_in_path: !params.name_only,
         case_sensitive: params.case_sensitive,
+        include_filters: params
+            .include_filters
+            .as_ref()
+            .map(|s| parse_filter_keywords(s))
+            .unwrap_or_default(),
+        exclude_filters: params
+            .exclude_filters
+            .as_ref()
+            .map(|s| parse_filter_keywords(s))
+            .unwrap_or_default(),
     };
 
     // Perform search

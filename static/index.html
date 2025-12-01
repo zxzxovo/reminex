@@ -288,6 +288,20 @@
                            style="width: 180px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
                            title="可选：替换显示结果中的原始根路径（支持盘符替换）">
                 </div>
+            </div>
+            <div class="options" style="margin-top: 10px;">
+                <div class="option">
+                    <label for="includeFilterInput">必须包含:</label>
+                    <input type="text" id="includeFilterInput" placeholder="用逗号分隔多个关键词" 
+                           style="width: 200px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
+                           title="筛选必须同时包含这些关键词的结果">
+                </div>
+                <div class="option">
+                    <label for="excludeFilterInput">必须排除:</label>
+                    <input type="text" id="excludeFilterInput" placeholder="用逗号分隔多个关键词" 
+                           style="width: 200px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
+                           title="排除包含这些关键词的结果">
+                </div>
                 <div style="margin-left: auto;">
                     <a href="/indexer" class="nav-button">📑 创建索引</a>
                 </div>
@@ -311,6 +325,8 @@
         const caseSensitiveCheckbox = document.getElementById('caseSensitive');
         const limitInput = document.getElementById('limitInput');
         const rootPathInput = document.getElementById('rootPathInput');
+        const includeFilterInput = document.getElementById('includeFilterInput');
+        const excludeFilterInput = document.getElementById('excludeFilterInput');
 
         // Search on Enter key
         searchInput.addEventListener('keypress', (e) => {
@@ -347,6 +363,17 @@
                 const rootPath = rootPathInput.value.trim();
                 if (rootPath) {
                     params.append('root_path', rootPath);
+                }
+
+                // Add filters if specified
+                const includeFilter = includeFilterInput.value.trim();
+                if (includeFilter) {
+                    params.append('include_filters', includeFilter);
+                }
+
+                const excludeFilter = excludeFilterInput.value.trim();
+                if (excludeFilter) {
+                    params.append('exclude_filters', excludeFilter);
                 }
 
                 const response = await fetch(`/api/search?${params}`);
