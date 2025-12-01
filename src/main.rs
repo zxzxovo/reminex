@@ -197,18 +197,21 @@ fn perform_search(
 
 async fn handle_web_command(args: WebArgs) -> Result<()> {
     let db_path = args.db.unwrap_or_else(|| PathBuf::from("./.reminex.db"));
-    
+
     if !db_path.exists() {
-        anyhow::bail!("数据库文件不存在: {}\n请先运行索引命令创建数据库", db_path.display());
+        anyhow::bail!(
+            "数据库文件不存在: {}\n请先运行索引命令创建数据库",
+            db_path.display()
+        );
     }
-    
+
     println!("🌐 启动 Web 服务器");
     println!("📂 数据库: {}", db_path.display());
     println!("🔗 地址: http://localhost:{}", args.port);
     println!();
-    
+
     web::run_server(db_path, args.port).await?;
-    
+
     Ok(())
 }
 

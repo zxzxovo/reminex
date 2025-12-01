@@ -1,9 +1,9 @@
 use axum::{
+    Router,
     extract::{Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Json},
-    routing::get,
-    Router,
+    routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -11,7 +11,8 @@ use std::sync::Arc;
 use tower_http::services::ServeDir;
 
 use crate::db::Database;
-use crate::searcher::{build_tree, search_from_input, SearchConfig, TreeNode};
+use crate::indexer;
+use crate::searcher::{SearchConfig, TreeNode, build_tree, search_from_input};
 
 /// Web server state
 #[derive(Clone)]
@@ -46,6 +47,34 @@ pub struct KeywordResults {
     pub keyword: String,
     pub count: usize,
     pub tree: TreeNodeJson,
+}
+
+/// Index request from web client
+#[derive(Debug, Deserialize)]
+pub struct IndexRequest {
+    pub root_path: String,
+    pub db_path: String,
+    #[serde(default = "default_batch_size")]
+    pub batch_size: usize,
+    #[serde(default)]
+    pub with_metadata: bool,
+    #[serde(default)]
+    pub incremental: bool,
+}
+
+fn default_batch_size() -> usize {
+    5000
+}
+
+/// Index response to web client
+#[derive(Debug, Serialize)]
+pub struct IndexResponse {
+    pub success: bool,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_secs: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 /// JSON-serializable tree node
@@ -129,9 +158,69 @@ async fn search_handler(
     })
 }
 
+/// Index handler - process indexing request
+async fn index_handler(
+    Json(req): Json<IndexRequest>,
+) -> Result<Json<IndexResponse>, (StatusCode, Json<IndexResponse>)> {
+    // Spawn blocking task for indexing (I/O intensive)
+    let result = tokio::task::spawn_blocking(move || {
+        // Open database
+        let db = Database::new(&req.db_path);
+
+        // Perform indexing based on mode
+        let duration = if req.incremental {
+            indexer::scan_idxs_with_metadata(&req.root_path, &db, req.batch_size)
+                .map_err(|e| format!("Indexing failed: {}", e))?
+        } else if req.with_metadata {
+            indexer::scan_idxs_with_metadata(&req.root_path, &db, req.batch_size)
+                .map_err(|e| format!("Indexing failed: {}", e))?
+        } else {
+            indexer::scan_idxs(&req.root_path, &db, req.batch_size)
+                .map_err(|e| format!("Indexing failed: {}", e))?
+        };
+
+        Ok::<_, String>(duration)
+    })
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(IndexResponse {
+                success: false,
+                message: String::new(),
+                duration_secs: None,
+                error: Some(format!("Task join error: {}", e)),
+            }),
+        )
+    })?;
+
+    match result {
+        Ok(duration) => Ok(Json(IndexResponse {
+            success: true,
+            message: "Indexing completed successfully".to_string(),
+            duration_secs: Some(duration.as_secs_f64()),
+            error: None,
+        })),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(IndexResponse {
+                success: false,
+                message: String::new(),
+                duration_secs: None,
+                error: Some(e),
+            }),
+        )),
+    }
+}
+
 /// Root handler - serve the main HTML page
 async fn root_handler() -> Html<&'static str> {
     Html(include_str!("../static/index.html"))
+}
+
+/// Indexer page handler - serve the indexer HTML page
+async fn indexer_handler() -> Html<&'static str> {
+    Html(include_str!("../static/indexer.html"))
 }
 
 /// Health check endpoint
@@ -145,7 +234,9 @@ pub fn create_app(db_path: PathBuf) -> Router {
 
     Router::new()
         .route("/", get(root_handler))
+        .route("/indexer", get(indexer_handler))
         .route("/api/search", get(search_handler))
+        .route("/api/index", post(index_handler))
         .route("/health", get(health_handler))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state)

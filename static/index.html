@@ -95,10 +95,30 @@
             transform: none;
         }
 
+        .nav-button {
+            padding: 10px 25px;
+            font-size: 14px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-button:hover {
+            background: #f0f0ff;
+            transform: translateY(-1px);
+        }
+
         .options {
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .option {
@@ -261,6 +281,9 @@
                     <label for="limitInput">结果限制:</label>
                     <input type="number" id="limitInput" value="2000" min="1" max="10000" 
                            style="width: 80px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                </div>
+                <div style="margin-left: auto;">
+                    <a href="/indexer" class="nav-button">📑 创建索引</a>
                 </div>
             </div>
         </div>

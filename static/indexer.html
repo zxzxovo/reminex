@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reminex - 文件索引器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-index {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-index:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-index:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-search {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-search:hover {
+            background: #f8f9ff;
+        }
+
+        .status {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            color: #2e7d32;
+        }
+
+        .status.error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+
+        .status-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+
+        .status-message {
+            line-height: 1.6;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(33, 150, 243, 0.3);
+            border-top-color: #2196f3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .help-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📑 Reminex Indexer</h1>
+        <p class="subtitle">高性能文件索引工具</p>
+
+        <form id="indexForm">
+            <div class="form-group">
+                <label for="rootPath">扫描根目录 *</label>
+                <input type="text" id="rootPath" placeholder="例如: F:\Documents" required>
+                <div class="help-text">请输入要扫描的文件夹路径</div>
+            </div>
+
+            <div class="form-group">
+                <label for="dbPath">数据库路径 *</label>
+                <input type="text" id="dbPath" placeholder="例如: my_index.reminex.db" required>
+                <div class="help-text">索引数据将保存到此数据库文件</div>
+            </div>
+
+            <div class="form-group">
+                <label for="batchSize">批处理大小</label>
+                <input type="number" id="batchSize" value="5000" min="100" max="50000" step="100">
+                <div class="help-text">每批写入数据库的文件数量（1000-10000 推荐）</div>
+            </div>
+
+            <div class="form-group">
+                <label>索引选项</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="withMetadata" checked>
+                        <label for="withMetadata">包含元数据（文件大小、修改时间）</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="incremental">
+                        <label for="incremental">增量更新</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-index" id="indexBtn">
+                    🚀 开始索引
+                </button>
+                <button type="button" class="btn-search" onclick="location.href='/'">
+                    🔍 搜索界面
+                </button>
+            </div>
+        </form>
+
+        <div id="status" class="status">
+            <div class="status-title" id="statusTitle"></div>
+            <div class="status-message" id="statusMessage"></div>
+            <div class="stats" id="stats"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('indexForm');
+        const statusDiv = document.getElementById('status');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusMessage = document.getElementById('statusMessage');
+        const statsDiv = document.getElementById('stats');
+        const indexBtn = document.getElementById('indexBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const rootPath = document.getElementById('rootPath').value.trim();
+            const dbPath = document.getElementById('dbPath').value.trim();
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            const withMetadata = document.getElementById('withMetadata').checked;
+            const incremental = document.getElementById('incremental').checked;
+
+            if (!rootPath || !dbPath) {
+                showStatus('error', '错误', '请填写所有必填字段');
+                return;
+            }
+
+            // Show loading status
+            showStatus('loading', '索引进行中...', '正在扫描和索引文件，请稍候...');
+            indexBtn.disabled = true;
+            statsDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/index', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        root_path: rootPath,
+                        db_path: dbPath,
+                        batch_size: batchSize,
+                        with_metadata: withMetadata,
+                        incremental: incremental
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const duration = data.duration_secs || 0;
+                    const minutes = Math.floor(duration / 60);
+                    const seconds = (duration % 60).toFixed(2);
+                    const timeStr = minutes > 0 
+                        ? `${minutes} 分 ${seconds} 秒` 
+                        : `${seconds} 秒`;
+
+                    showStatus('success', '✅ 索引完成！', data.message);
+                    
+                    // Show stats
+                    statsDiv.innerHTML = `
+                        <div class="stat-item">
+                            <div class="stat-value">${timeStr}</div>
+                            <div class="stat-label">总耗时</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">${dbPath}</div>
+                            <div class="stat-label">数据库文件</div>
+                        </div>
+                    `;
+                } else {
+                    showStatus('error', '❌ 索引失败', data.error || '未知错误');
+                }
+            } catch (error) {
+                showStatus('error', '❌ 请求失败', `网络错误: ${error.message}`);
+            } finally {
+                indexBtn.disabled = false;
+            }
+        });
+
+        function showStatus(type, title, message) {
+            statusDiv.className = `status show ${type}`;
+            
+            if (type === 'loading') {
+                statusTitle.innerHTML = `<span class="spinner"></span>${title}`;
+            } else {
+                statusTitle.textContent = title;
+            }
+            
+            statusMessage.textContent = message;
+        }
+
+        // Auto-fill example paths on page load
+        window.addEventListener('load', () => {
+            const rootPathInput = document.getElementById('rootPath');
+            const dbPathInput = document.getElementById('dbPath');
+            
+            if (!rootPathInput.value) {
+                // Example path
+                rootPathInput.placeholder = 'F:\\Documents';
+            }
+            
+            if (!dbPathInput.value) {
+                const timestamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                dbPathInput.value = `index_${timestamp}.reminex.db`;
+            }
+        });
+    </script>
+</body>
+</html>
