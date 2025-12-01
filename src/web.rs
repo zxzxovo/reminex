@@ -76,6 +76,8 @@ pub struct IndexResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration_secs: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub skipped_paths: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
 
@@ -100,10 +102,10 @@ impl From<&TreeNode> for TreeNodeJson {
 }
 
 /// Apply root path replacement to search results
-/// 
+///
 /// This function replaces the original root path in database with a new one.
 /// Useful when database is moved between different machines or mount points.
-/// 
+///
 /// For Windows: Supports drive letter replacement (e.g., F:\ -> D:\)
 /// For all systems: Supports full path prefix replacement
 fn apply_root_path_replacement(
@@ -162,11 +164,10 @@ fn detect_root_prefix(path: &str) -> Option<String> {
 
 /// Replace the prefix of a path
 fn replace_path_prefix(path: &str, old_prefix: &str, new_prefix: &str) -> String {
-    if path.starts_with(old_prefix) {
+    if let Some(remainder) = path.strip_prefix(old_prefix) {
         // Handle both forward and backward slashes
-        let remainder = &path[old_prefix.len()..];
         let remainder = remainder.trim_start_matches(['/', '\\']);
-        
+
         if remainder.is_empty() {
             new_prefix.to_string()
         } else {
@@ -255,7 +256,7 @@ async fn index_handler(
         let db = Database::new(&req.db_path);
 
         // Perform indexing based on mode
-        let duration = if req.incremental {
+        let index_result = if req.incremental {
             indexer::scan_idxs_with_metadata(&req.root_path, &db, req.batch_size)
                 .map_err(|e| format!("Indexing failed: {}", e))?
         } else if req.with_metadata {
@@ -266,7 +267,7 @@ async fn index_handler(
                 .map_err(|e| format!("Indexing failed: {}", e))?
         };
 
-        Ok::<_, String>(duration)
+        Ok::<_, String>(index_result)
     })
     .await
     .map_err(|e| {
@@ -276,24 +277,42 @@ async fn index_handler(
                 success: false,
                 message: String::new(),
                 duration_secs: None,
+                skipped_paths: None,
                 error: Some(format!("Task join error: {}", e)),
             }),
         )
     })?;
 
     match result {
-        Ok(duration) => Ok(Json(IndexResponse {
-            success: true,
-            message: "Indexing completed successfully".to_string(),
-            duration_secs: Some(duration.as_secs_f64()),
-            error: None,
-        })),
+        Ok(index_result) => {
+            let message = if index_result.skipped_paths.is_empty() {
+                "Indexing completed successfully".to_string()
+            } else {
+                format!(
+                    "Indexing completed with {} paths skipped due to permissions",
+                    index_result.skipped_paths.len()
+                )
+            };
+
+            Ok(Json(IndexResponse {
+                success: true,
+                message,
+                duration_secs: Some(index_result.duration.as_secs_f64()),
+                skipped_paths: if index_result.skipped_paths.is_empty() {
+                    None
+                } else {
+                    Some(index_result.skipped_paths)
+                },
+                error: None,
+            }))
+        }
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(IndexResponse {
                 success: false,
                 message: String::new(),
                 duration_secs: None,
+                skipped_paths: None,
                 error: Some(e),
             }),
         )),

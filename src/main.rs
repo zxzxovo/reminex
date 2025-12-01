@@ -71,7 +71,7 @@ fn handle_index_command(args: IndexArgs) -> Result<()> {
     println!("🚀 开始扫描...");
     println!("   批量大小: {}", batch_size);
 
-    let duration = if args.no_metadata {
+    let result = if args.no_metadata {
         println!("   模式: 快速扫描（无元数据）");
         scan_idxs(&root_path, &db, batch_size)?
     } else {
@@ -86,11 +86,11 @@ fn handle_index_command(args: IndexArgs) -> Result<()> {
     })?;
 
     println!("\n✅ 索引完成！");
-    println!("   耗时: {:.2}s", duration.as_secs_f64());
+    println!("   耗时: {:.2}s", result.duration.as_secs_f64());
     println!("   文件数: {}", count);
     println!(
         "   速度: {:.0} 文件/秒",
-        count as f64 / duration.as_secs_f64()
+        count as f64 / result.duration.as_secs_f64()
     );
 
     Ok(())

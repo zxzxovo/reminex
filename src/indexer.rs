@@ -5,10 +5,20 @@ use rayon::prelude::*;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime};
 
 use crate::db::{Database, Index};
+
+/// Result of an indexing operation
+#[derive(Debug, Clone)]
+pub struct IndexResult {
+    /// Duration of the indexing operation
+    pub duration: Duration,
+    /// Paths that were skipped due to permission errors
+    pub skipped_paths: Vec<String>,
+}
 
 /// Scans a directory and collects file indices without metadata.
 ///
@@ -21,8 +31,8 @@ use crate::db::{Database, Index};
 /// * `batch_size` - Number of indices to batch before writing (recommended: 1000-10000)
 ///
 /// # Returns
-/// Duration of the scan operation
-pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> Result<Duration> {
+/// IndexResult containing duration and skipped paths
+pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> Result<IndexResult> {
     let start = Instant::now();
     let root = root.as_ref();
 
@@ -40,6 +50,7 @@ pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> R
     progress.set_message("扫描中");
 
     let counter = Arc::new(AtomicU64::new(0));
+    let skipped_paths = Arc::new(Mutex::new(Vec::new()));
 
     // Channel for collecting indices from parallel workers
     let (tx, rx) = bounded::<Index>(batch_size * 2);
@@ -61,19 +72,31 @@ pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> R
     });
 
     // Parallel scanning
-    let scan_result = scan_directory_parallel(root, tx);
+    scan_directory_parallel(root, tx, skipped_paths.clone());
 
     // Wait for writer to finish
     let write_result = writer_handle
         .join()
         .map_err(|_| anyhow::anyhow!("Writer thread panicked"))?;
 
-    scan_result?;
     write_result?;
 
     progress.finish_with_message("完成");
 
-    Ok(start.elapsed())
+    // Report skipped paths
+    let skipped = skipped_paths.lock().unwrap();
+    if !skipped.is_empty() {
+        eprintln!("\n⚠️  以下 {} 个路径因权限不足被跳过:", skipped.len());
+        for path in skipped.iter() {
+            eprintln!("  ❌ {}", path);
+        }
+        eprintln!("\n💡 提示: 以管理员权限运行可能可以索引这些路径");
+    }
+
+    Ok(IndexResult {
+        duration: start.elapsed(),
+        skipped_paths: skipped.clone(),
+    })
 }
 
 /// Scans a directory and collects file indices with metadata (mtime, size).
@@ -87,12 +110,12 @@ pub fn scan_idxs<P: AsRef<Path>>(root: P, db: &Database, batch_size: usize) -> R
 /// * `batch_size` - Number of indices to batch before writing (recommended: 1000-10000)
 ///
 /// # Returns
-/// Duration of the scan operation
+/// IndexResult containing duration and skipped paths
 pub fn scan_idxs_with_metadata<P: AsRef<Path>>(
     root: P,
     db: &Database,
     batch_size: usize,
-) -> Result<Duration> {
+) -> Result<IndexResult> {
     let start = Instant::now();
     let root = root.as_ref();
 
@@ -110,6 +133,7 @@ pub fn scan_idxs_with_metadata<P: AsRef<Path>>(
     progress.set_message("扫描中 (含元数据)");
 
     let counter = Arc::new(AtomicU64::new(0));
+    let skipped_paths = Arc::new(Mutex::new(Vec::new()));
 
     let (tx, rx) = bounded::<Index>(batch_size * 2);
     let db_clone = db.clone();
@@ -126,29 +150,51 @@ pub fn scan_idxs_with_metadata<P: AsRef<Path>>(
         )
     });
 
-    let scan_result = scan_directory_parallel_with_metadata(root, tx);
+    scan_directory_parallel_with_metadata(root, tx, skipped_paths.clone());
 
     let write_result = writer_handle
         .join()
         .map_err(|_| anyhow::anyhow!("Writer thread panicked"))?;
 
-    scan_result?;
     write_result?;
 
     progress.finish_with_message("完成");
 
-    Ok(start.elapsed())
+    // Report skipped paths
+    let skipped = skipped_paths.lock().unwrap();
+    if !skipped.is_empty() {
+        eprintln!("\n⚠️  以下 {} 个路径因权限不足被跳过:", skipped.len());
+        for path in skipped.iter() {
+            eprintln!("  ❌ {}", path);
+        }
+        eprintln!("\n💡 提示: 以管理员权限运行可能可以索引这些路径");
+    }
+
+    Ok(IndexResult {
+        duration: start.elapsed(),
+        skipped_paths: skipped.clone(),
+    })
 }
 
 /// Recursively scans directory in parallel without metadata.
-fn scan_directory_parallel<P: AsRef<Path>>(root: P, tx: Sender<Index>) -> Result<()> {
+fn scan_directory_parallel<P: AsRef<Path>>(
+    root: P,
+    tx: Sender<Index>,
+    skipped_paths: Arc<Mutex<Vec<String>>>,
+) {
     let root = root.as_ref();
 
     // Read entries in current directory
-    let entries: Vec<_> = fs::read_dir(root)
-        .with_context(|| format!("Failed to read directory: {}", root.display()))?
-        .filter_map(|e| e.ok())
-        .collect();
+    let entries: Vec<_> = match fs::read_dir(root) {
+        Ok(entries) => entries.filter_map(|e| e.ok()).collect(),
+        Err(_) => {
+            // Record skipped path and continue
+            if let Ok(mut skipped) = skipped_paths.lock() {
+                skipped.push(root.display().to_string());
+            }
+            return;
+        }
+    };
 
     // Separate files and directories
     let (files, dirs): (Vec<_>, Vec<_>) = entries
@@ -156,7 +202,7 @@ fn scan_directory_parallel<P: AsRef<Path>>(root: P, tx: Sender<Index>) -> Result
         .partition(|entry| entry.path().is_file());
 
     // Process files in parallel
-    files.par_iter().try_for_each(|entry| {
+    files.par_iter().for_each(|entry| {
         let path = entry.path();
         let path_str = path.to_string_lossy().to_string();
 
@@ -164,32 +210,40 @@ fn scan_directory_parallel<P: AsRef<Path>>(root: P, tx: Sender<Index>) -> Result
 
         let idx = Index::new(path_str, name);
 
-        tx.send(idx)
-            .map_err(|_| anyhow::anyhow!("Failed to send index to channel"))
-    })?;
+        // Ignore send errors (channel might be closed)
+        let _ = tx.send(idx);
+    });
 
     // Recursively scan subdirectories in parallel
     dirs.par_iter()
-        .try_for_each(|entry| scan_directory_parallel(entry.path(), tx.clone()))?;
-
-    Ok(())
+        .for_each(|entry| scan_directory_parallel(entry.path(), tx.clone(), skipped_paths.clone()));
 }
 
 /// Recursively scans directory in parallel with metadata extraction.
-fn scan_directory_parallel_with_metadata<P: AsRef<Path>>(root: P, tx: Sender<Index>) -> Result<()> {
+fn scan_directory_parallel_with_metadata<P: AsRef<Path>>(
+    root: P,
+    tx: Sender<Index>,
+    skipped_paths: Arc<Mutex<Vec<String>>>,
+) {
     let root = root.as_ref();
 
-    let entries: Vec<_> = fs::read_dir(root)
-        .with_context(|| format!("Failed to read directory: {}", root.display()))?
-        .filter_map(|e| e.ok())
-        .collect();
+    let entries: Vec<_> = match fs::read_dir(root) {
+        Ok(entries) => entries.filter_map(|e| e.ok()).collect(),
+        Err(_) => {
+            // Record skipped path and continue
+            if let Ok(mut skipped) = skipped_paths.lock() {
+                skipped.push(root.display().to_string());
+            }
+            return;
+        }
+    };
 
     let (files, dirs): (Vec<_>, Vec<_>) = entries
         .into_iter()
         .partition(|entry| entry.path().is_file());
 
     // Process files with metadata in parallel
-    files.par_iter().try_for_each(|entry| {
+    files.par_iter().for_each(|entry| {
         let path = entry.path();
         let path_str = path.to_string_lossy().to_string();
 
@@ -204,15 +258,14 @@ fn scan_directory_parallel_with_metadata<P: AsRef<Path>>(root: P, tx: Sender<Ind
             }
         };
 
-        tx.send(idx)
-            .map_err(|_| anyhow::anyhow!("Failed to send index to channel"))
-    })?;
+        // Ignore send errors (channel might be closed)
+        let _ = tx.send(idx);
+    });
 
     // Recursively scan subdirectories
-    dirs.par_iter()
-        .try_for_each(|entry| scan_directory_parallel_with_metadata(entry.path(), tx.clone()))?;
-
-    Ok(())
+    dirs.par_iter().for_each(|entry| {
+        scan_directory_parallel_with_metadata(entry.path(), tx.clone(), skipped_paths.clone())
+    });
 }
 
 /// Extracts file metadata (modification time and size).
@@ -352,9 +405,12 @@ mod tests {
             std::env::temp_dir().join(format!("test_scan_basic_{}.reminex.db", std::process::id()));
         let db = Database::init(&db_path).unwrap();
 
-        let duration = scan_idxs(temp_dir.path(), &db, 100).unwrap();
+        let result = scan_idxs(temp_dir.path(), &db, 100).unwrap();
 
-        assert!(duration.as_millis() > 0, "Scan should take some time");
+        assert!(
+            result.duration.as_millis() > 0,
+            "Scan should take some time"
+        );
 
         // Verify files were indexed
         let count = db
@@ -377,9 +433,9 @@ mod tests {
             std::env::temp_dir().join(format!("test_scan_meta_{}.reminex.db", std::process::id()));
         let db = Database::init(&db_path).unwrap();
 
-        let duration = scan_idxs_with_metadata(temp_dir.path(), &db, 100).unwrap();
+        let result = scan_idxs_with_metadata(temp_dir.path(), &db, 5).unwrap();
 
-        assert!(duration.as_millis() > 0);
+        assert!(result.duration.as_millis() > 0);
 
         // Verify files have metadata
         let has_metadata = db
@@ -433,9 +489,9 @@ mod tests {
         let db = Database::init(&db_path).unwrap();
 
         // Use very large batch size
-        let duration = scan_idxs(temp_dir.path(), &db, 10000).unwrap();
+        let result = scan_idxs(temp_dir.path(), &db, 10000).unwrap();
 
-        assert!(duration.as_millis() > 0);
+        assert!(result.duration.as_millis() > 0);
 
         let count = db
             .batch_operation(|conn| {

@@ -332,7 +332,7 @@
                     showStatus('success', '✅ 索引完成！', data.message);
                     
                     // Show stats
-                    statsDiv.innerHTML = `
+                    let statsHTML = `
                         <div class="stat-item">
                             <div class="stat-value">${timeStr}</div>
                             <div class="stat-label">总耗时</div>
@@ -342,6 +342,25 @@
                             <div class="stat-label">数据库文件</div>
                         </div>
                     `;
+
+                    // Show skipped paths if any
+                    if (data.skipped_paths && data.skipped_paths.length > 0) {
+                        statsHTML += `
+                            <div class="stat-item" style="grid-column: 1 / -1;">
+                                <div style="color: #ff9800; font-weight: 600; margin-bottom: 10px;">
+                                    ⚠️ ${data.skipped_paths.length} 个路径被跳过
+                                </div>
+                                <div style="max-height: 150px; overflow-y: auto; text-align: left; background: #fff3e0; padding: 10px; border-radius: 5px; font-size: 0.85em;">
+                                    ${data.skipped_paths.map(path => `❌ ${path}`).join('<br>')}
+                                </div>
+                                <div style="margin-top: 10px; font-size: 0.85em; color: #666;">
+                                    💡 提示: 以管理员权限运行可能可以索引这些路径
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    statsDiv.innerHTML = statsHTML;
                 } else {
                     showStatus('error', '❌ 索引失败', data.error || '未知错误');
                 }
