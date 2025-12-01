@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use rusqlite::params;
+use std::path::{Path, PathBuf};
 
 use crate::db::Database;
 
@@ -77,15 +77,13 @@ impl Default for SearchConfig {
 /// # Example
 /// ```
 /// use reminex::searcher::parse_search_keywords;
-/// 
+///
 /// let keywords = parse_search_keywords("photo; video image");
 /// assert_eq!(keywords, vec!["photo", "video", "image"]);
 /// ```
 pub fn parse_search_keywords(input: &str) -> Vec<String> {
     input
-        .split(|c: char| {
-            c == ';' || c == '；' || c == ' ' || c == ',' || c == '，' || c == '\t'
-        })
+        .split(|c: char| c == ';' || c == '；' || c == ' ' || c == ',' || c == '，' || c == '\t')
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
@@ -112,7 +110,6 @@ pub fn search_by_keyword(
 
     db.batch_operation(|conn| {
         let like_pattern = format!("%{}%", keyword);
-        
         let query = if config.search_in_path {
             format!(
                 "SELECT path, name FROM files WHERE name LIKE ?1 OR path LIKE ?1 ORDER BY path LIMIT {}",
@@ -188,7 +185,7 @@ pub fn search_from_input(
     config: &SearchConfig,
 ) -> Result<Vec<(String, Vec<SearchResult>)>> {
     let keywords = parse_search_keywords(input);
-    
+
     if keywords.is_empty() {
         return Ok(Vec::new());
     }
@@ -206,10 +203,7 @@ pub fn search_from_input(
 ///
 /// # Returns
 /// Root TreeNode containing the hierarchical structure
-pub fn build_tree(
-    results: &[SearchResult],
-    root_name: &str,
-) -> TreeNode {
+pub fn build_tree(results: &[SearchResult], root_name: &str) -> TreeNode {
     if results.is_empty() {
         return TreeNode::new(root_name.to_string(), PathBuf::new());
     }
@@ -218,7 +212,7 @@ pub fn build_tree(
     let common_prefix = find_common_prefix(results);
     let mut root = TreeNode::new(
         format!("{} ({})", root_name, common_prefix.display()),
-        common_prefix.clone()
+        common_prefix.clone(),
     );
 
     for result in results {
@@ -250,10 +244,10 @@ fn find_common_prefix(results: &[SearchResult]) -> PathBuf {
     for result in results.iter().skip(1) {
         let path = PathBuf::from(&result.path);
         let parent = path.parent().unwrap_or(Path::new("."));
-        
+
         // Find common path between current common and this path
         common = find_common_path(&common, parent);
-        
+
         // If we've reduced to root or current dir, no point continuing
         if common == Path::new(".") || common == Path::new("/") || common == Path::new("") {
             break;
@@ -267,10 +261,10 @@ fn find_common_prefix(results: &[SearchResult]) -> PathBuf {
 fn find_common_path(path1: &Path, path2: &Path) -> PathBuf {
     let components1: Vec<_> = path1.components().collect();
     let components2: Vec<_> = path2.components().collect();
-    
+
     let mut common = PathBuf::new();
     let min_len = components1.len().min(components2.len());
-    
+
     for i in 0..min_len {
         if components1[i] == components2[i] {
             common.push(components1[i]);
@@ -278,7 +272,7 @@ fn find_common_path(path1: &Path, path2: &Path) -> PathBuf {
             break;
         }
     }
-    
+
     if common.as_os_str().is_empty() {
         PathBuf::from(".")
     } else {
@@ -293,7 +287,7 @@ fn insert_path_into_tree(root: &mut TreeNode, target_path: &Path) {
         insert_full_path_into_tree(root, target_path);
         return;
     };
-    
+
     if relative == Path::new("") {
         return;
     }
@@ -318,7 +312,7 @@ fn insert_path_into_tree(root: &mut TreeNode, target_path: &Path) {
 /// Inserts a full file path into the tree structure (fallback method).
 fn insert_full_path_into_tree(root: &mut TreeNode, target_path: &Path) {
     let mut current = root;
-    
+
     for comp in target_path.components() {
         let part_str = comp.as_os_str().to_string_lossy().to_string();
         let child_path = if current.path.as_os_str().is_empty() {
@@ -352,7 +346,7 @@ fn insert_full_path_into_tree(root: &mut TreeNode, target_path: &Path) {
 /// Formatted string representation
 pub fn format_tree_node(node: &TreeNode, prefix: &str, is_last: bool) -> String {
     let mut output = String::new();
-    
+
     let connector = if is_last { "└─ " } else { "├─ " };
     let display_name = if node.is_leaf() {
         node.name.clone()
@@ -398,11 +392,26 @@ mod tests {
 
         // Insert test data
         let indices = vec![
-            Index::new("Z:\\photos\\2023\\summer.jpg".to_string(), "summer.jpg".to_string()),
-            Index::new("Z:\\photos\\2023\\winter.jpg".to_string(), "winter.jpg".to_string()),
-            Index::new("Z:\\documents\\report.pdf".to_string(), "report.pdf".to_string()),
-            Index::new("Z:\\videos\\summer_vacation.mp4".to_string(), "summer_vacation.mp4".to_string()),
-            Index::new("Z:\\music\\summer_hits.mp3".to_string(), "summer_hits.mp3".to_string()),
+            Index::new(
+                "Z:\\photos\\2023\\summer.jpg".to_string(),
+                "summer.jpg".to_string(),
+            ),
+            Index::new(
+                "Z:\\photos\\2023\\winter.jpg".to_string(),
+                "winter.jpg".to_string(),
+            ),
+            Index::new(
+                "Z:\\documents\\report.pdf".to_string(),
+                "report.pdf".to_string(),
+            ),
+            Index::new(
+                "Z:\\videos\\summer_vacation.mp4".to_string(),
+                "summer_vacation.mp4".to_string(),
+            ),
+            Index::new(
+                "Z:\\music\\summer_hits.mp3".to_string(),
+                "summer_hits.mp3".to_string(),
+            ),
         ];
         db.add_idxs(&indices).unwrap();
 
@@ -415,31 +424,28 @@ mod tests {
             parse_search_keywords("photo;video;music"),
             vec!["photo", "video", "music"]
         );
-        
+
         assert_eq!(
             parse_search_keywords("photo video music"),
             vec!["photo", "video", "music"]
         );
-        
+
         assert_eq!(
             parse_search_keywords("photo; video, music"),
             vec!["photo", "video", "music"]
         );
-        
+
         assert_eq!(
             parse_search_keywords("photo；video，music"),
             vec!["photo", "video", "music"]
         );
-        
+
         assert_eq!(
             parse_search_keywords("  photo  ;  video  "),
             vec!["photo", "video"]
         );
-        
-        assert_eq!(
-            parse_search_keywords(""),
-            Vec::<String>::new()
-        );
+
+        assert_eq!(parse_search_keywords(""), Vec::<String>::new());
     }
 
     #[test]
@@ -478,7 +484,7 @@ mod tests {
 
         let results = search_from_input(&db, "summer; winter", &config).unwrap();
         assert_eq!(results.len(), 2);
-        
+
         let results = search_from_input(&db, "", &config).unwrap();
         assert_eq!(results.len(), 0);
     }
@@ -486,7 +492,7 @@ mod tests {
     #[test]
     fn test_search_config() {
         let (_temp, db) = create_test_db_with_data();
-        
+
         // Test max_results limit
         let config = SearchConfig {
             max_results: 1,
@@ -514,14 +520,14 @@ mod tests {
         ];
 
         let tree = build_tree(&results, "搜索结果");
-        
+
         assert_eq!(tree.children.len(), 2); // documents and photos
         assert!(tree.name.contains("搜索结果"));
-        
+
         // Find photos folder
         let photos = tree.children.iter().find(|c| c.name == "photos").unwrap();
         assert_eq!(photos.children.len(), 1); // 2023 folder
-        
+
         let year_2023 = &photos.children[0];
         assert_eq!(year_2023.name, "2023");
         assert_eq!(year_2023.children.len(), 2); // summer.jpg and winter.jpg
@@ -531,20 +537,29 @@ mod tests {
     fn test_tree_node_is_leaf() {
         let mut node = TreeNode::new("file.txt".to_string(), PathBuf::from("Z:\\file.txt"));
         assert!(node.is_leaf());
-        
-        node.children.push(TreeNode::new("child".to_string(), PathBuf::from("Z:\\child")));
+
+        node.children.push(TreeNode::new(
+            "child".to_string(),
+            PathBuf::from("Z:\\child"),
+        ));
         assert!(!node.is_leaf());
     }
 
     #[test]
     fn test_format_tree_node() {
         let mut root = TreeNode::new("root".to_string(), PathBuf::from("Z:\\"));
-        root.children.push(TreeNode::new("file1.txt".to_string(), PathBuf::from("Z:\\file1.txt")));
-        root.children.push(TreeNode::new("file2.txt".to_string(), PathBuf::from("Z:\\file2.txt")));
-        
+        root.children.push(TreeNode::new(
+            "file1.txt".to_string(),
+            PathBuf::from("Z:\\file1.txt"),
+        ));
+        root.children.push(TreeNode::new(
+            "file2.txt".to_string(),
+            PathBuf::from("Z:\\file2.txt"),
+        ));
+
         let output = format_tree_node(&root.children[0], "", false);
         assert!(output.contains("├─ file1.txt"));
-        
+
         let output = format_tree_node(&root.children[1], "", true);
         assert!(output.contains("└─ file2.txt"));
     }
@@ -556,7 +571,7 @@ mod tests {
 
         let results = search_by_keyword(&db, "", &config).unwrap();
         assert_eq!(results.len(), 0);
-        
+
         let results = search_by_keyword(&db, "   ", &config).unwrap();
         assert_eq!(results.len(), 0);
     }
