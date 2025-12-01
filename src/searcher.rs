@@ -507,13 +507,13 @@ mod tests {
         // Use platform-independent path construction
         use std::path::MAIN_SEPARATOR;
         let sep = MAIN_SEPARATOR.to_string();
-        
+
         let base = if cfg!(windows) {
             "Z:".to_string()
         } else {
             "".to_string()
         };
-        
+
         let results = vec![
             SearchResult {
                 path: format!("{}{sep}photos{sep}2023{sep}summer.jpg", base),
@@ -532,11 +532,11 @@ mod tests {
         let tree = build_tree(&results, "搜索结果");
 
         assert!(tree.name.contains("搜索结果"));
-        
+
         // The tree structure depends on the platform and common prefix detection
         // Just verify we have a valid tree structure
         assert!(!tree.children.is_empty(), "Tree should have children");
-        
+
         // Find photos folder (might be nested under platform-specific root)
         fn find_node_recursive<'a>(node: &'a TreeNode, name: &str) -> Option<&'a TreeNode> {
             if node.name == name {
@@ -549,9 +549,8 @@ mod tests {
             }
             None
         }
-        
-        let photos = find_node_recursive(&tree, "photos")
-            .expect("Should find photos folder");
+
+        let photos = find_node_recursive(&tree, "photos").expect("Should find photos folder");
         assert_eq!(photos.children.len(), 1); // 2023 folder
 
         let year_2023 = &photos.children[0];
