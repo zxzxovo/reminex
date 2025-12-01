@@ -83,7 +83,7 @@ impl Default for SearchConfig {
 /// ```
 pub fn parse_search_keywords(input: &str) -> Vec<String> {
     input
-        .split(|c: char| c == ';' || c == '；' || c == ' ' || c == ',' || c == '，' || c == '\t')
+        .split([';', '；', ' ', ',', '，', '\t'])
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
