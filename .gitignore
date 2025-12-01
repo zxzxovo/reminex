@@ -1,3 +1,42 @@
-/target
-/test_demo
-/*.reminex.db
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.reminex.db
+/test_demo/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Temporary files
+*.tmp
+*.temp
+flycheck*
+
+# Documentation
+/doc/
+
+# Coverage reports
+cobertura.xml
+tarpaulin-report.html
+
+# OS specific
+Thumbs.db
+.directory
