@@ -194,6 +194,12 @@
         .tree-folder {
             color: #667eea;
             font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tree-folder:hover {
+            color: #764ba2;
         }
 
         .tree-file {
@@ -202,6 +208,24 @@
 
         .tree-branch {
             color: #999;
+        }
+
+        .tree-toggle {
+            display: inline-block;
+            width: 14px;
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 2px;
+        }
+
+        .tree-children {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        .tree-children.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
         }
 
         .loading {
@@ -414,23 +438,59 @@
             }
 
             resultsDiv.innerHTML = html;
+            
+            // Reset node ID counter for new results
+            nodeIdCounter = 0;
+            
+            // Add click handlers for collapsible folders
+            document.querySelectorAll('.tree-folder').forEach(folder => {
+                folder.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const nodeId = this.getAttribute('data-node-id');
+                    const children = document.getElementById('children-' + nodeId);
+                    const toggle = this.querySelector('.tree-toggle');
+                    
+                    if (children) {
+                        children.classList.toggle('collapsed');
+                        if (children.classList.contains('collapsed')) {
+                            toggle.textContent = '▶';
+                        } else {
+                            toggle.textContent = '▼';
+                        }
+                    }
+                });
+            });
         }
+
+        let nodeIdCounter = 0;
 
         function renderTree(node, prefix = '', isLast = true) {
             if (!node) return '';
 
             const connector = isLast ? '└─ ' : '├─ ';
-            const nodeClass = node.is_leaf ? 'tree-file' : 'tree-folder';
-            const nodeName = node.is_leaf ? node.name : node.name + '/';
+            const nodeId = nodeIdCounter++;
             
-            let html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="${nodeClass}">${escapeHtml(nodeName)}</span></div>`;
-
-            if (node.children && node.children.length > 0) {
-                const newPrefix = prefix + (isLast ? '   ' : '│  ');
-                node.children.forEach((child, index) => {
-                    const childIsLast = index === node.children.length - 1;
-                    html += renderTree(child, newPrefix, childIsLast);
-                });
+            let html = '';
+            
+            if (node.is_leaf) {
+                // File node - no toggle
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-file">${escapeHtml(node.name)}</span></div>`;
+            } else {
+                // Folder node - with toggle
+                const hasChildren = node.children && node.children.length > 0;
+                const toggle = hasChildren ? '▼' : '';
+                
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}"><span class="tree-toggle">${toggle}</span>${escapeHtml(node.name + '/')}</span></div>`;
+                
+                if (hasChildren) {
+                    const newPrefix = prefix + (isLast ? '   ' : '│  ');
+                    let childrenHtml = '';
+                    node.children.forEach((child, index) => {
+                        const childIsLast = index === node.children.length - 1;
+                        childrenHtml += renderTree(child, newPrefix, childIsLast);
+                    });
+                    html += `<div id="children-${nodeId}" class="tree-children" style="max-height: 10000px;">${childrenHtml}</div>`;
+                }
             }
 
             return html;
