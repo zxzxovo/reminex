@@ -1,6 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use anyhow::{Context, Result};
 
 use reminex::db::Database;
@@ -165,12 +165,9 @@ fn perform_search(db: &Database, input: &str, config: &SearchConfig, args: &Sear
         
         if args.tree {
             // 树形显示
-            let root_name = args.root_name.as_deref().unwrap_or("根目录");
-            let root_path = args.root_path.as_deref()
-                .map(Path::new)
-                .unwrap_or_else(|| Path::new("/"));
+            let root_name = args.root_name.as_deref().unwrap_or("搜索结果");
             
-            let tree = build_tree(&items, root_name, root_path);
+            let tree = build_tree(&items, root_name);
             println!();
             print_tree(&tree);
         } else {
@@ -245,12 +242,9 @@ struct SearchArgs {
     #[arg(short = 'N', long, help = "仅搜索文件名（不搜索路径）")]
     name_only: bool,
     
-    #[arg(short, long, help = "区分大小写")]
+    #[arg(short = 'c', long, help = "区分大小写")]
     case_sensitive: bool,
     
-    #[arg(long, help = "树形显示的根目录名称", default_value = "根目录")]
+    #[arg(long, help = "树形显示的根目录名称", default_value = "搜索结果")]
     root_name: Option<String>,
-    
-    #[arg(long, help = "树形显示的根目录路径", default_value = "/")]
-    root_path: Option<String>,
 }

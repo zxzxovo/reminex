@@ -198,21 +198,28 @@ pub fn search_from_input(
 
 /// Builds a tree structure from search results.
 ///
-/// Creates a hierarchical tree with a custom root path.
+/// Automatically identifies the common prefix path from all results.
 ///
 /// # Arguments
 /// * `results` - Search results to build tree from
-/// * `root_name` - Display name for root node (e.g., "NAS (Z:)")
-/// * `root_path` - Base path for the root (e.g., "Z:\\")
+/// * `root_name` - Display name for root node (e.g., "搜索结果")
 ///
 /// # Returns
 /// Root TreeNode containing the hierarchical structure
 pub fn build_tree(
     results: &[SearchResult],
     root_name: &str,
-    root_path: &Path,
 ) -> TreeNode {
-    let mut root = TreeNode::new(root_name.to_string(), root_path.to_path_buf());
+    if results.is_empty() {
+        return TreeNode::new(root_name.to_string(), PathBuf::new());
+    }
+
+    // Find common prefix from all paths
+    let common_prefix = find_common_prefix(results);
+    let mut root = TreeNode::new(
+        format!("{} ({})", root_name, common_prefix.display()),
+        common_prefix.clone()
+    );
 
     for result in results {
         insert_path_into_tree(&mut root, &PathBuf::from(&result.path));
@@ -222,9 +229,68 @@ pub fn build_tree(
     root
 }
 
+/// Finds the common directory prefix for all search results.
+///
+/// Returns the deepest common directory shared by all paths.
+fn find_common_prefix(results: &[SearchResult]) -> PathBuf {
+    if results.is_empty() {
+        return PathBuf::from(".");
+    }
+
+    if results.len() == 1 {
+        let path = PathBuf::from(&results[0].path);
+        return path.parent().unwrap_or(Path::new(".")).to_path_buf();
+    }
+
+    // Start with the first path's parent directory
+    let first_path = PathBuf::from(&results[0].path);
+    let mut common = first_path.parent().unwrap_or(Path::new(".")).to_path_buf();
+
+    // Iterate through all results to find common prefix
+    for result in results.iter().skip(1) {
+        let path = PathBuf::from(&result.path);
+        let parent = path.parent().unwrap_or(Path::new("."));
+        
+        // Find common path between current common and this path
+        common = find_common_path(&common, parent);
+        
+        // If we've reduced to root or current dir, no point continuing
+        if common == Path::new(".") || common == Path::new("/") || common == Path::new("") {
+            break;
+        }
+    }
+
+    common
+}
+
+/// Finds the common path between two paths.
+fn find_common_path(path1: &Path, path2: &Path) -> PathBuf {
+    let components1: Vec<_> = path1.components().collect();
+    let components2: Vec<_> = path2.components().collect();
+    
+    let mut common = PathBuf::new();
+    let min_len = components1.len().min(components2.len());
+    
+    for i in 0..min_len {
+        if components1[i] == components2[i] {
+            common.push(components1[i]);
+        } else {
+            break;
+        }
+    }
+    
+    if common.as_os_str().is_empty() {
+        PathBuf::from(".")
+    } else {
+        common
+    }
+}
+
 /// Inserts a file path into the tree structure.
 fn insert_path_into_tree(root: &mut TreeNode, target_path: &Path) {
     let Ok(relative) = target_path.strip_prefix(&root.path) else {
+        // If strip_prefix fails, use the full path
+        insert_full_path_into_tree(root, target_path);
         return;
     };
     
@@ -238,6 +304,30 @@ fn insert_path_into_tree(root: &mut TreeNode, target_path: &Path) {
         let child_path = current.path.join(&part_str);
 
         let child_index = current.children.iter().position(|c| c.path == child_path);
+        if let Some(idx) = child_index {
+            current = &mut current.children[idx];
+        } else {
+            let new_node = TreeNode::new(part_str, child_path);
+            current.children.push(new_node);
+            let len = current.children.len();
+            current = &mut current.children[len - 1];
+        }
+    }
+}
+
+/// Inserts a full file path into the tree structure (fallback method).
+fn insert_full_path_into_tree(root: &mut TreeNode, target_path: &Path) {
+    let mut current = root;
+    
+    for comp in target_path.components() {
+        let part_str = comp.as_os_str().to_string_lossy().to_string();
+        let child_path = if current.path.as_os_str().is_empty() {
+            PathBuf::from(&part_str)
+        } else {
+            current.path.join(&part_str)
+        };
+
+        let child_index = current.children.iter().position(|c| c.name == part_str);
         if let Some(idx) = child_index {
             current = &mut current.children[idx];
         } else {
@@ -423,10 +513,10 @@ mod tests {
             },
         ];
 
-        let tree = build_tree(&results, "NAS (Z:)", Path::new("Z:\\"));
+        let tree = build_tree(&results, "搜索结果");
         
         assert_eq!(tree.children.len(), 2); // documents and photos
-        assert_eq!(tree.name, "NAS (Z:)");
+        assert!(tree.name.contains("搜索结果"));
         
         // Find photos folder
         let photos = tree.children.iter().find(|c| c.name == "photos").unwrap();

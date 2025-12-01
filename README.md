@@ -81,8 +81,8 @@ reminex search -d myfiles.reminex.db photo 2024
 # 树形显示搜索结果
 reminex search -d myfiles.reminex.db -t keyword
 
-# 自定义树形根节点
-reminex search -d myfiles.reminex.db -t --root-name "我的文件" --root-path "." keyword
+# 自定义根节点名称
+reminex search -d myfiles.reminex.db -t --root-name "我的文件" keyword
 
 # 交互式搜索模式
 reminex search -d myfiles.reminex.db
@@ -146,18 +146,18 @@ reminex search -d files.db -c Keyword
 # 基础树形显示
 reminex search -d files.db -t photo
 
-# 自定义根节点
-reminex search -d files.db -t --root-name "搜索结果" --root-path "/data" photo
+# 自定义根节点名称
+reminex search -d files.db -t --root-name "搜索结果" photo
 ```
 
 输出示例：
 ```
-搜索结果 (/data)
-├── photos/
-│   ├── summer.jpg
-│   └── winter.jpg
-└── documents/
-    └── report.pdf
+搜索结果 (Z:\)
+├─ photos/
+│   ├─ summer.jpg
+│   └─ winter.jpg
+└─ documents/
+    └─ report.pdf
 ```
 
 ## 🔧 命令行参数
@@ -190,8 +190,7 @@ reminex search [OPTIONS] [KEYWORDS]...
 | `--tree` | `-t` | 树形显示结果 | false |
 | `--name-only` | `-N` | 仅搜索文件名 | false |
 | `--case-sensitive` | `-c` | 区分大小写 | false |
-| `--root-name <NAME>` | - | 树形根节点名称 | "Root" |
-| `--root-path <PATH>` | - | 树形根节点路径 | "." |
+| `--root-name <NAME>` | - | 树形根节点名称 | "搜索结果" |
 
 ## ⚡ 性能优化
 
