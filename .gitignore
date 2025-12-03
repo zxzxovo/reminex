@@ -18,6 +18,7 @@ Cargo.lock
 *.db-wal
 *.reminex.db
 /test_demo/
+/test_dbs/
 
 # Build artifacts
 *.exe

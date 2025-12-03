@@ -12,18 +12,20 @@ use tower_http::services::ServeDir;
 
 use crate::db::Database;
 use crate::indexer;
-use crate::searcher::{SearchConfig, SearchResult, TreeNode, build_tree, search_from_input};
+use crate::searcher::{SearchConfig, SearchResult, TreeNode, build_tree, search_in_selected_database, parse_search_keywords};
 
 /// Web server state
 #[derive(Clone)]
 pub struct AppState {
-    pub db_path: PathBuf,
+    pub db_paths: Vec<PathBuf>,
 }
 
 /// Search request from web client
 #[derive(Debug, Deserialize)]
 pub struct SearchRequest {
     pub query: String,
+    #[serde(default = "default_selected_db")]
+    pub selected_db: String,
     #[serde(default)]
     pub limit: Option<usize>,
     #[serde(default)]
@@ -36,6 +38,10 @@ pub struct SearchRequest {
     pub include_filters: Option<String>,
     #[serde(default)]
     pub exclude_filters: Option<String>,
+}
+
+fn default_selected_db() -> String {
+    "all".to_string()
 }
 
 /// Search response to web client
@@ -197,9 +203,6 @@ async fn search_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<SearchRequest>,
 ) -> impl IntoResponse {
-    // Open database
-    let db = Database::new(&state.db_path);
-
     // Configure search
     let config = SearchConfig {
         max_results: params.limit.unwrap_or(2000),
@@ -217,8 +220,11 @@ async fn search_handler(
             .unwrap_or_default(),
     };
 
-    // Perform search
-    let results = match search_from_input(&db, &params.query, &config) {
+    // Parse keywords
+    let keywords = parse_search_keywords(&params.query);
+
+    // Perform multi-database search
+    let results = match search_in_selected_database(&state.db_paths, &params.selected_db, &keywords, &config) {
         Ok(results) => results,
         Err(e) => {
             return Json(SearchResponse {
@@ -229,11 +235,19 @@ async fn search_handler(
         }
     };
 
+    // Group results by keyword (merge across databases if searching all)
+    let mut keyword_map: std::collections::HashMap<String, Vec<SearchResult>> = std::collections::HashMap::new();
+    
+    for (_db_name, keyword, items) in results {
+        keyword_map.entry(keyword).or_insert_with(Vec::new).extend(items);
+    }
+
     // Apply root path replacement if specified
+    let processed_results: Vec<(String, Vec<SearchResult>)> = keyword_map.into_iter().collect();
     let processed_results = if let Some(ref new_root) = params.root_path {
-        apply_root_path_replacement(results, new_root)
+        apply_root_path_replacement(processed_results, new_root)
     } else {
-        results
+        processed_results
     };
 
     // Build trees for each keyword
@@ -358,26 +372,59 @@ async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "OK")
 }
 
+/// Database list response
+#[derive(Debug, Serialize)]
+pub struct DatabaseListResponse {
+    pub databases: Vec<DatabaseInfo>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DatabaseInfo {
+    pub name: String,
+    pub path: String,
+}
+
+/// List available databases
+async fn list_databases_handler(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let databases = state
+        .db_paths
+        .iter()
+        .map(|path| DatabaseInfo {
+            name: path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string(),
+            path: path.to_string_lossy().to_string(),
+        })
+        .collect();
+
+    Json(DatabaseListResponse { databases })
+}
+
 /// Create and configure the web application router
-pub fn create_app(db_path: PathBuf) -> Router {
-    let state = Arc::new(AppState { db_path });
+pub fn create_app(db_paths: Vec<PathBuf>) -> Router {
+    let state = Arc::new(AppState { db_paths });
 
     Router::new()
         .route("/", get(root_handler))
         .route("/indexer", get(indexer_handler))
         .route("/api/search", get(search_handler))
         .route("/api/index", post(index_handler))
+        .route("/api/databases", get(list_databases_handler))
         .route("/health", get(health_handler))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state)
 }
 
 /// Start the web server
-pub async fn run_server(db_path: PathBuf, port: u16) -> anyhow::Result<()> {
+pub async fn run_server(db_paths: Vec<PathBuf>, port: u16) -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    let app = create_app(db_path);
+    let app = create_app(db_paths);
 
     let addr = format!("0.0.0.0:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;

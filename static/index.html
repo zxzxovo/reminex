@@ -294,6 +294,13 @@
             </div>
             <div class="options">
                 <div class="option">
+                    <label for="databaseSelect">数据库:</label>
+                    <select id="databaseSelect" style="width: 220px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px; cursor: pointer;">
+                        <option value="all">全部数据库</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="option">
                     <input type="checkbox" id="nameOnly">
                     <label for="nameOnly">仅搜索文件名</label>
                 </div>
@@ -351,6 +358,36 @@
         const rootPathInput = document.getElementById('rootPathInput');
         const includeFilterInput = document.getElementById('includeFilterInput');
         const excludeFilterInput = document.getElementById('excludeFilterInput');
+        const databaseSelect = document.getElementById('databaseSelect');
+
+        // Load available databases on page load
+        async function loadDatabases() {
+            try {
+                const response = await fetch('/api/databases');
+                const data = await response.json();
+                
+                // Clear existing options except "all"
+                databaseSelect.innerHTML = '<option value="all">全部数据库</option>';
+                
+                // Add database options
+                data.databases.forEach(db => {
+                    const option = document.createElement('option');
+                    option.value = db.name;
+                    option.textContent = db.name;
+                    databaseSelect.appendChild(option);
+                });
+                
+                // Show database count in title
+                if (data.databases.length > 0) {
+                    document.title = `Reminex - ${data.databases.length} 个数据库`;
+                }
+            } catch (error) {
+                console.error('Failed to load databases:', error);
+            }
+        }
+
+        // Load databases when page loads
+        loadDatabases();
 
         // Search on Enter key
         searchInput.addEventListener('keypress', (e) => {
@@ -378,6 +415,7 @@
             try {
                 const params = new URLSearchParams({
                     query: query,
+                    selected_db: databaseSelect.value,
                     name_only: nameOnlyCheckbox.checked,
                     case_sensitive: caseSensitiveCheckbox.checked,
                     limit: limitInput.value

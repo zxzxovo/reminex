@@ -663,3 +663,79 @@ mod tests {
         assert_eq!(results.len(), 0);
     }
 }
+
+/// Search across multiple databases
+///
+/// # Arguments
+/// * `db_paths` - Vector of database file paths
+/// * `keywords` - Vector of search keywords
+/// * `config` - Search configuration
+///
+/// # Returns
+/// Vector of tuples (database_name, keyword, results) for each database and keyword
+pub fn search_multiple_databases(
+    db_paths: &[PathBuf],
+    keywords: &[String],
+    config: &SearchConfig,
+) -> Result<Vec<(String, String, Vec<SearchResult>)>> {
+    let mut all_results = Vec::new();
+    
+    for db_path in db_paths {
+        let db_name = db_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        
+        let db = Database::new(db_path);
+        
+        for keyword in keywords {
+            let results = search_by_keyword(&db, keyword, config)?;
+            all_results.push((db_name.clone(), keyword.clone(), results));
+        }
+    }
+    
+    Ok(all_results)
+}
+
+/// Search in a specific database from multiple available databases
+///
+/// # Arguments
+/// * `db_paths` - Vector of available database file paths
+/// * `db_name` - Name of the database to search in (or "all" for all databases)
+/// * `keywords` - Vector of search keywords
+/// * `config` - Search configuration
+///
+/// # Returns
+/// Vector of tuples (database_name, keyword, results)
+pub fn search_in_selected_database(
+    db_paths: &[PathBuf],
+    db_name: &str,
+    keywords: &[String],
+    config: &SearchConfig,
+) -> Result<Vec<(String, String, Vec<SearchResult>)>> {
+    if db_name == "all" {
+        return search_multiple_databases(db_paths, keywords, config);
+    }
+    
+    // Find the specific database
+    let db_path = db_paths
+        .iter()
+        .find(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n == db_name)
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| anyhow::anyhow!("数据库不存在: {}", db_name))?;
+    
+    let db = Database::new(db_path);
+    let mut results = Vec::new();
+    
+    for keyword in keywords {
+        let search_results = search_by_keyword(&db, keyword, config)?;
+        results.push((db_name.to_string(), keyword.clone(), search_results));
+    }
+    
+    Ok(results)
+}
