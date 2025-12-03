@@ -679,22 +679,22 @@ pub fn search_multiple_databases(
     config: &SearchConfig,
 ) -> Result<Vec<(String, String, Vec<SearchResult>)>> {
     let mut all_results = Vec::new();
-    
+
     for db_path in db_paths {
         let db_name = db_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown")
             .to_string();
-        
+
         let db = Database::new(db_path);
-        
+
         for keyword in keywords {
             let results = search_by_keyword(&db, keyword, config)?;
             all_results.push((db_name.clone(), keyword.clone(), results));
         }
     }
-    
+
     Ok(all_results)
 }
 
@@ -717,7 +717,7 @@ pub fn search_in_selected_database(
     if db_name == "all" {
         return search_multiple_databases(db_paths, keywords, config);
     }
-    
+
     // Find the specific database
     let db_path = db_paths
         .iter()
@@ -728,14 +728,14 @@ pub fn search_in_selected_database(
                 .unwrap_or(false)
         })
         .ok_or_else(|| anyhow::anyhow!("数据库不存在: {}", db_name))?;
-    
+
     let db = Database::new(db_path);
     let mut results = Vec::new();
-    
+
     for keyword in keywords {
         let search_results = search_by_keyword(&db, keyword, config)?;
         results.push((db_name.to_string(), keyword.clone(), search_results));
     }
-    
+
     Ok(results)
 }

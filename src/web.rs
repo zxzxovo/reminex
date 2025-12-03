@@ -12,7 +12,10 @@ use tower_http::services::ServeDir;
 
 use crate::db::Database;
 use crate::indexer;
-use crate::searcher::{SearchConfig, SearchResult, TreeNode, build_tree, search_in_selected_database, parse_search_keywords};
+use crate::searcher::{
+    SearchConfig, SearchResult, TreeNode, build_tree, parse_search_keywords,
+    search_in_selected_database,
+};
 
 /// Web server state
 #[derive(Clone)]
@@ -224,22 +227,25 @@ async fn search_handler(
     let keywords = parse_search_keywords(&params.query);
 
     // Perform multi-database search
-    let results = match search_in_selected_database(&state.db_paths, &params.selected_db, &keywords, &config) {
-        Ok(results) => results,
-        Err(e) => {
-            return Json(SearchResponse {
-                success: false,
-                results: vec![],
-                error: Some(format!("Search failed: {}", e)),
-            });
-        }
-    };
+    let results =
+        match search_in_selected_database(&state.db_paths, &params.selected_db, &keywords, &config)
+        {
+            Ok(results) => results,
+            Err(e) => {
+                return Json(SearchResponse {
+                    success: false,
+                    results: vec![],
+                    error: Some(format!("Search failed: {}", e)),
+                });
+            }
+        };
 
     // Group results by keyword (merge across databases if searching all)
-    let mut keyword_map: std::collections::HashMap<String, Vec<SearchResult>> = std::collections::HashMap::new();
-    
+    let mut keyword_map: std::collections::HashMap<String, Vec<SearchResult>> =
+        std::collections::HashMap::new();
+
     for (_db_name, keyword, items) in results {
-        keyword_map.entry(keyword).or_insert_with(Vec::new).extend(items);
+        keyword_map.entry(keyword).or_default().extend(items);
     }
 
     // Apply root path replacement if specified
@@ -385,9 +391,7 @@ pub struct DatabaseInfo {
 }
 
 /// List available databases
-async fn list_databases_handler(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+async fn list_databases_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let databases = state
         .db_paths
         .iter()

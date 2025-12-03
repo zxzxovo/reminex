@@ -513,19 +513,20 @@ mod tests {
 /// - Directories (will search for .reminex.db files at depth 1)
 pub fn discover_databases<P: AsRef<Path>>(paths: &[P]) -> Vec<PathBuf> {
     let mut databases = Vec::new();
-    
+
     for path in paths {
         let path = path.as_ref();
-        
+
         if !path.exists() {
             eprintln!("⚠️  路径不存在: {}", path.display());
             continue;
         }
-        
+
         if path.is_file() {
             // Check if it's a database file
-            if path.extension().and_then(|s| s.to_str()) == Some("db") 
-                && path.to_string_lossy().ends_with(".reminex.db") {
+            if path.extension().and_then(|s| s.to_str()) == Some("db")
+                && path.to_string_lossy().ends_with(".reminex.db")
+            {
                 databases.push(path.to_path_buf());
             } else {
                 eprintln!("⚠️  不是有效的数据库文件: {}", path.display());
@@ -535,19 +536,20 @@ pub fn discover_databases<P: AsRef<Path>>(paths: &[P]) -> Vec<PathBuf> {
             if let Ok(entries) = fs::read_dir(path) {
                 for entry in entries.filter_map(|e| e.ok()) {
                     let entry_path = entry.path();
-                    if entry_path.is_file() 
+                    if entry_path.is_file()
                         && entry_path.extension().and_then(|s| s.to_str()) == Some("db")
-                        && entry_path.to_string_lossy().ends_with(".reminex.db") {
+                        && entry_path.to_string_lossy().ends_with(".reminex.db")
+                    {
                         databases.push(entry_path);
                     }
                 }
             }
         }
     }
-    
+
     // Remove duplicates and sort
     databases.sort();
     databases.dedup();
-    
+
     databases
 }

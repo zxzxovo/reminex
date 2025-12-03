@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use reminex::db::Database;
 use reminex::indexer::{discover_databases, scan_idxs, scan_idxs_with_metadata};
-use reminex::searcher::{SearchConfig, build_tree, print_tree, search_from_input, search_in_selected_database};
+use reminex::searcher::{SearchConfig, build_tree, print_tree, search_in_selected_database};
 use reminex::web;
 
 #[tokio::main]
@@ -118,7 +118,10 @@ fn handle_search_command(args: SearchArgs) -> Result<()> {
     // Display discovered databases
     println!("📚 发现 {} 个数据库:", db_paths.len());
     for (i, db_path) in db_paths.iter().enumerate() {
-        let db_name = db_path.file_name().and_then(|n| n.to_str()).unwrap_or("unknown");
+        let db_name = db_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
         println!("   {}. {}", i + 1, db_name);
     }
     println!();
@@ -175,7 +178,7 @@ fn perform_multi_db_search(
     args: &SearchArgs,
 ) -> Result<()> {
     use reminex::searcher::parse_search_keywords;
-    
+
     let keywords = parse_search_keywords(input);
     let results = search_in_selected_database(db_paths, selected_db, &keywords, config)?;
 
@@ -187,7 +190,7 @@ fn perform_multi_db_search(
     // Group results by database and keyword
     let mut current_db = String::new();
     let mut current_keyword = String::new();
-    
+
     for (db_name, keyword, items) in results {
         // Print database header if changed
         if db_name != current_db {
@@ -199,12 +202,12 @@ fn perform_multi_db_search(
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             current_db = db_name.clone();
         }
-        
+
         // Print keyword results
         if keyword != current_keyword || db_name != current_db {
             current_keyword = keyword.clone();
         }
-        
+
         if items.is_empty() {
             println!("\n「{}」未找到任何结果", keyword);
             continue;
@@ -226,49 +229,8 @@ fn perform_multi_db_search(
             }
         }
     }
-    
+
     println!();
-    Ok(())
-}
-
-fn perform_search(
-    db: &Database,
-    input: &str,
-    config: &SearchConfig,
-    args: &SearchArgs,
-) -> Result<()> {
-    let results = search_from_input(db, input, config)?;
-
-    if results.is_empty() {
-        println!("\n❌ 未找到任何结果\n");
-        return Ok(());
-    }
-
-    for (keyword, items) in results {
-        if items.is_empty() {
-            println!("\n「{}」未找到任何结果", keyword);
-            continue;
-        }
-
-        println!("\n「{}」找到 {} 项结果：", keyword, items.len());
-
-        if args.tree {
-            // 树形显示
-            let root_name = args.root_name.as_deref().unwrap_or("搜索结果");
-
-            let tree = build_tree(&items, root_name);
-            println!();
-            print_tree(&tree);
-        } else {
-            // 列表显示
-            println!();
-            for item in &items {
-                println!("  {}", item.path);
-            }
-        }
-        println!();
-    }
-
     Ok(())
 }
 
@@ -294,7 +256,10 @@ async fn handle_web_command(args: WebArgs) -> Result<()> {
     println!("🌐 启动 Web 服务器");
     println!("📚 发现 {} 个数据库:", db_paths.len());
     for db_path in &db_paths {
-        let db_name = db_path.file_name().and_then(|n| n.to_str()).unwrap_or("unknown");
+        let db_name = db_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown");
         println!("   - {}", db_name);
     }
     println!("🔗 地址: http://localhost:{}", args.port);
@@ -361,7 +326,11 @@ struct SearchArgs {
     #[arg(short, long, help = "数据库文件路径或包含数据库的文件夹（可多个）", num_args = 1..)]
     db: Option<Vec<PathBuf>>,
 
-    #[arg(long, help = "选择搜索的数据库名称（默认: all）", default_value = "all")]
+    #[arg(
+        long,
+        help = "选择搜索的数据库名称（默认: all）",
+        default_value = "all"
+    )]
     select_db: String,
 
     #[arg(short, long, help = "结果数量限制", default_value = "2000")]

@@ -228,6 +228,18 @@
             opacity: 0;
         }
 
+        .folder-count {
+            margin-left: 8px;
+            color: #ff6b6b;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .folder-count.show {
+            display: inline;
+        }
+
         .loading {
             text-align: center;
             padding: 40px;
@@ -460,6 +472,9 @@
                 return;
             }
 
+            // Reset node ID counter for new results
+            nodeIdCounter = 0;
+
             let html = '';
             for (const result of results) {
                 html += `
@@ -477,27 +492,49 @@
 
             resultsDiv.innerHTML = html;
             
-            // Reset node ID counter for new results
-            nodeIdCounter = 0;
-            
             // Add click handlers for collapsible folders
-            document.querySelectorAll('.tree-folder').forEach(folder => {
+            const folders = document.querySelectorAll('.tree-folder');
+            
+            folders.forEach(folder => {
                 folder.addEventListener('click', function(e) {
                     e.stopPropagation();
                     const nodeId = this.getAttribute('data-node-id');
                     const children = document.getElementById('children-' + nodeId);
                     const toggle = this.querySelector('.tree-toggle');
+                    const countSpan = this.querySelector('.folder-count');
                     
                     if (children) {
                         children.classList.toggle('collapsed');
                         if (children.classList.contains('collapsed')) {
                             toggle.textContent = '▶';
+                            // Show count when collapsed
+                            if (countSpan) {
+                                countSpan.classList.add('show');
+                            }
                         } else {
                             toggle.textContent = '▼';
+                            // Hide count when expanded
+                            if (countSpan) {
+                                countSpan.classList.remove('show');
+                            }
                         }
                     }
                 });
             });
+        }
+
+        // Count files in a node tree recursively
+        function countFiles(node) {
+            if (!node) return 0;
+            if (node.is_leaf) return 1;
+            
+            let count = 0;
+            if (node.children && node.children.length > 0) {
+                for (const child of node.children) {
+                    count += countFiles(child);
+                }
+            }
+            return count;
         }
 
         let nodeIdCounter = 0;
@@ -517,8 +554,9 @@
                 // Folder node - with toggle
                 const hasChildren = node.children && node.children.length > 0;
                 const toggle = hasChildren ? '▼' : '';
+                const fileCount = countFiles(node);
                 
-                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}"><span class="tree-toggle">${toggle}</span>${escapeHtml(node.name + '/')}</span></div>`;
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}"><span class="tree-toggle">${toggle}</span>${escapeHtml(node.name + '/')}<span class="folder-count">(${fileCount})</span></span></div>`;
                 
                 if (hasChildren) {
                     const newPrefix = prefix + (isLast ? '   ' : '│  ');
