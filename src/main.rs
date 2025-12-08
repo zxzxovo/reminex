@@ -381,6 +381,10 @@ struct WebArgs {
     #[arg(short, long, help = "数据库文件路径或包含数据库的文件夹（可多个）", num_args = 1..)]
     db: Option<Vec<PathBuf>>,
 
-    #[arg(short, long, help = "Web 服务器端口（默认 3000，若被占用则自动尝试下一个端口）")]
+    #[arg(
+        short,
+        long,
+        help = "Web 服务器端口（默认 3000，若被占用则自动尝试下一个端口）"
+    )]
     port: Option<u16>,
 }
