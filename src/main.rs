@@ -104,7 +104,7 @@ fn handle_search_command(args: SearchArgs) -> Result<()> {
         // Use current directory to search for databases
         let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
         let discovered = discover_databases(&[current_dir]);
-        
+
         if discovered.is_empty() {
             // Also check for default .reminex.db in current directory
             let default_path = PathBuf::from("./.reminex.db");
