@@ -425,18 +425,54 @@ pub fn create_app(db_paths: Vec<PathBuf>) -> Router {
 
 /// Start the web server
 pub async fn run_server(db_paths: Vec<PathBuf>, port: u16) -> anyhow::Result<()> {
+    run_server_with_retry(db_paths, port, false).await
+}
+
+pub async fn run_server_with_retry(
+    db_paths: Vec<PathBuf>,
+    start_port: u16,
+    auto_retry: bool,
+) -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
     let app = create_app(db_paths);
 
-    let addr = format!("0.0.0.0:{}", port);
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let max_retries = if auto_retry { 32 } else { 1 };
+    let mut last_error = None;
 
-    tracing::info!("🌐 Web server running at http://localhost:{}", port);
-    tracing::info!("📂 Press Ctrl+C to stop");
+    for attempt in 0..max_retries {
+        let port = start_port + attempt as u16;
+        let addr = format!("0.0.0.0:{}", port);
 
-    axum::serve(listener, app).await?;
+        match tokio::net::TcpListener::bind(&addr).await {
+            Ok(listener) => {
+                if attempt > 0 {
+                    println!("⚠️  端口 {} 已被占用，自动切换到端口 {}", start_port, port);
+                }
+                println!("🌐 Web 服务器运行在 http://localhost:{}", port);
+                println!("📂 按 Ctrl+C 停止");
 
-    Ok(())
+                axum::serve(listener, app).await?;
+                return Ok(());
+            }
+            Err(e) => {
+                last_error = Some(e);
+                if !auto_retry {
+                    break;
+                }
+            }
+        }
+    }
+
+    if auto_retry {
+        anyhow::bail!(
+            "无法启动 Web 服务器：端口 {}-{} 都已被占用",
+            start_port,
+            start_port + max_retries as u16 - 1
+        );
+    } else {
+        Err(last_error.unwrap().into())
+    }
 }
+

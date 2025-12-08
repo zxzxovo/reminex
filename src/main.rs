@@ -20,14 +20,22 @@ async fn run() -> Result<()> {
     let app = App::parse();
 
     match app.commands {
-        Commands::Index(args) | Commands::I(args) => {
+        Some(Commands::Index(args)) | Some(Commands::I(args)) => {
             handle_index_command(args)?;
         }
-        Commands::Search(args) | Commands::S(args) => {
+        Some(Commands::Search(args)) | Some(Commands::S(args)) => {
             handle_search_command(args)?;
         }
-        Commands::Web(args) | Commands::W(args) => {
+        Some(Commands::Web(args)) | Some(Commands::W(args)) => {
             handle_web_command(args).await?;
+        }
+        None => {
+            // 默认行为：启动 Web 服务器
+            let default_args = WebArgs {
+                db: None,
+                port: None,
+            };
+            handle_web_command(default_args).await?;
         }
     }
 
@@ -280,21 +288,22 @@ async fn handle_web_command(args: WebArgs) -> Result<()> {
             .unwrap_or("unknown");
         println!("   - {}", db_name);
     }
-    println!("🔗 地址: http://localhost:{}", args.port);
     println!();
 
-    web::run_server(db_paths, args.port).await?;
+    let port = args.port.unwrap_or(3000);
+    let auto_retry = args.port.is_none();
+    web::run_server_with_retry(db_paths, port, auto_retry).await?;
 
     Ok(())
 }
 
 #[derive(Parser)]
 #[command(name = "reminex")]
-#[command(about = "快速文件索引和搜索工具", long_about = None)]
+#[command(about = "快速文件索引和搜索工具 - 双击运行即启动 Web 服务器", long_about = None)]
 #[command(version)]
 struct App {
     #[command(subcommand)]
-    commands: Commands,
+    commands: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -372,6 +381,6 @@ struct WebArgs {
     #[arg(short, long, help = "数据库文件路径或包含数据库的文件夹（可多个）", num_args = 1..)]
     db: Option<Vec<PathBuf>>,
 
-    #[arg(short, long, help = "Web 服务器端口", default_value = "3000")]
-    port: u16,
+    #[arg(short, long, help = "Web 服务器端口（默认 3000，若被占用则自动尝试下一个端口）")]
+    port: Option<u16>,
 }
