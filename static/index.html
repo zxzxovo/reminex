@@ -5,6 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reminex - 文件搜索引擎</title>
     <style>
+        :root {
+            /* Material Design 3 - Light Theme (Blue) */
+            --md-sys-color-primary: #1976D2;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-primary-container: #BBDEFB;
+            --md-sys-color-on-primary-container: #0D47A1;
+            --md-sys-color-secondary: #0288D1;
+            --md-sys-color-on-secondary: #FFFFFF;
+            --md-sys-color-secondary-container: #B3E5FC;
+            --md-sys-color-on-secondary-container: #01579B;
+            --md-sys-color-surface: #FFFFFF;
+            --md-sys-color-on-surface: #1D1B20;
+            --md-sys-color-surface-variant: #E7E0EC;
+            --md-sys-color-on-surface-variant: #49454F;
+            --md-sys-color-outline: #79747E;
+            --md-sys-color-outline-variant: #CAC4D0;
+            --md-sys-color-background: #F8F9FA;
+            --md-sys-color-on-background: #202124;
+            --md-sys-color-error: #B3261E;
+            --md-sys-color-on-error: #FFFFFF;
+            --md-sys-color-surface-container-lowest: #FFFFFF;
+            --md-sys-color-surface-container-low: #FFFFFF;
+            --md-sys-color-surface-container: #F8F9FA;
+            --md-sys-color-surface-container-high: #F1F3F4;
+            --md-sys-color-surface-container-highest: #E8EAED;
+            
+            /* Shadows */
+            --md-sys-elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+            --md-sys-elevation-2: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+            --md-sys-elevation-3: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-theme="dark"] {
+            /* Material Design 3 - Dark Theme (Blue) */
+            --md-sys-color-primary: #90CAF9;
+            --md-sys-color-on-primary: #0D47A1;
+            --md-sys-color-primary-container: #1565C0;
+            --md-sys-color-on-primary-container: #BBDEFB;
+            --md-sys-color-secondary: #81D4FA;
+            --md-sys-color-on-secondary: #01579B;
+            --md-sys-color-secondary-container: #0277BD;
+            --md-sys-color-on-secondary-container: #B3E5FC;
+            --md-sys-color-surface: #1D1B20;
+            --md-sys-color-on-surface: #E6E0E9;
+            --md-sys-color-surface-variant: #49454F;
+            --md-sys-color-on-surface-variant: #CAC4D0;
+            --md-sys-color-outline: #938F99;
+            --md-sys-color-outline-variant: #49454F;
+            --md-sys-color-background: #1D1B20;
+            --md-sys-color-on-background: #E6E0E9;
+            --md-sys-color-error: #F2B8B5;
+            --md-sys-color-on-error: #601410;
+            --md-sys-color-surface-container-lowest: #0F0D13;
+            --md-sys-color-surface-container-low: #1D1B20;
+            --md-sys-color-surface-container: #211F26;
+            --md-sys-color-surface-container-high: #2B2930;
+            --md-sys-color-surface-container-highest: #36343B;
+            
+            /* Shadows for dark mode */
+            --md-sys-elevation-1: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --md-sys-elevation-2: 0 2px 6px 2px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --md-sys-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,10 +76,12 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica', 'Arial', sans-serif;
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-background);
             min-height: 100vh;
             padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .container {
@@ -25,98 +91,130 @@
 
         .header {
             text-align: center;
-            color: white;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            flex: 1;
         }
 
         .header h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 2.5em;
+            margin-bottom: 8px;
+            color: var(--md-sys-color-primary);
+            font-weight: 400;
+            letter-spacing: 0;
         }
 
         .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+            font-size: 1em;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+
+        .theme-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            border: none;
+            background-color: var(--md-sys-color-surface-container-highest);
+            color: var(--md-sys-color-on-surface);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--md-sys-color-surface-container-high);
         }
 
         .search-box {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
+            background-color: var(--md-sys-color-surface-container-low);
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: var(--md-sys-elevation-1);
+            margin-bottom: 24px;
+            transition: background-color 0.3s;
         }
 
         .search-input-container {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
         }
 
         .search-input {
             flex: 1;
-            padding: 15px 20px;
+            padding: 16px 24px;
             font-size: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 28px;
             outline: none;
-            transition: border-color 0.3s;
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
         }
 
         .search-input:focus {
-            border-color: #667eea;
+            border-color: var(--md-sys-color-primary);
+            border-width: 2px;
+            padding: 15px 23px;
         }
 
         .search-button {
-            padding: 15px 40px;
+            padding: 16px 32px;
             font-size: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
             border: none;
-            border-radius: 10px;
+            border-radius: 28px;
             cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            box-shadow: var(--md-sys-elevation-1);
         }
 
         .search-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: var(--md-sys-elevation-2);
         }
 
         .search-button:active {
-            transform: translateY(0);
+            box-shadow: var(--md-sys-elevation-1);
         }
 
         .search-button:disabled {
-            background: #ccc;
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
             cursor: not-allowed;
-            transform: none;
+            box-shadow: none;
         }
 
         .nav-button {
-            padding: 10px 25px;
+            padding: 10px 24px;
             font-size: 14px;
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 8px;
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+            border: none;
+            border-radius: 20px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
+            font-weight: 500;
+            transition: background-color 0.2s, box-shadow 0.2s;
             text-decoration: none;
             display: inline-block;
         }
 
         .nav-button:hover {
-            background: #f0f0ff;
-            transform: translateY(-1px);
+            box-shadow: var(--md-sys-elevation-1);
         }
 
         .options {
             display: flex;
-            gap: 20px;
+            gap: 16px;
             flex-wrap: wrap;
             align-items: center;
         }
@@ -124,66 +222,157 @@
         .option {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
 
         .option input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
+            accent-color: var(--md-sys-color-primary);
         }
 
         .option label {
             cursor: pointer;
             user-select: none;
+            color: var(--md-sys-color-on-surface);
+            font-size: 14px;
+        }
+
+        .option select,
+        .option input[type="number"],
+        .option input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 8px;
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            font-size: 14px;
+            transition: border-color 0.2s, background-color 0.3s, color 0.3s;
+        }
+
+        .option select:focus,
+        .option input[type="number"]:focus,
+        .option input[type="text"]:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            border-width: 2px;
+            padding: 7px 11px;
+        }
+
+        .db-select {
+            width: 220px;
+        }
+
+        .limit-input {
+            width: 80px;
+        }
+
+        .root-path-input {
+            width: 180px;
+        }
+
+        .filter-input {
+            width: 200px;
         }
 
         .results {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            background-color: var(--md-sys-color-surface-container-low);
+            border-radius: 28px;
+            padding: 24px;
+            padding-bottom: 80px; /* Extra space for scroll buttons */
+            box-shadow: var(--md-sys-elevation-1);
             display: none;
+            transition: background-color 0.3s;
+            position: relative;
+            overflow: visible; /* Ensure all content is visible */
+            min-height: auto; /* No minimum height restriction */
         }
 
         .results.show {
             display: block;
         }
 
+        .scroll-buttons {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+        }
+
+        .scroll-buttons.show {
+            display: flex;
+        }
+
+        .scroll-button {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            border: none;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--md-sys-elevation-2);
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .scroll-button:hover {
+            box-shadow: var(--md-sys-elevation-3);
+            background-color: var(--md-sys-color-secondary-container);
+        }
+
+        .scroll-button:active {
+            box-shadow: var(--md-sys-elevation-1);
+        }
+
         .result-section {
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .result-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            padding: 16px 24px;
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .result-header h3 {
-            font-size: 1.3em;
+            font-size: 1.25em;
+            font-weight: 500;
         }
 
         .result-count {
-            background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            padding: 4px 16px;
+            border-radius: 16px;
+            font-size: 0.875em;
+            font-weight: 500;
         }
 
         .tree {
-            font-family: 'Courier New', monospace;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 14px;
             line-height: 1.6;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            padding: 16px;
+            background-color: var(--md-sys-color-surface);
+            border-radius: 16px;
             overflow-x: auto;
+            overflow-y: visible; /* Ensure vertical content is fully visible */
+            border: 1px solid var(--md-sys-color-outline-variant);
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         .tree-node {
@@ -192,28 +381,28 @@
         }
 
         .tree-folder {
-            color: #667eea;
-            font-weight: bold;
+            color: var(--md-sys-color-primary);
+            font-weight: 500;
             cursor: pointer;
             user-select: none;
         }
 
         .tree-folder:hover {
-            color: #764ba2;
+            color: var(--md-sys-color-secondary);
         }
 
         .tree-file {
-            color: #333;
+            color: var(--md-sys-color-on-surface);
         }
 
         .tree-branch {
-            color: #999;
+            color: var(--md-sys-color-outline);
         }
 
         .tree-toggle {
             display: inline-block;
             width: 14px;
-            color: #667eea;
+            color: var(--md-sys-color-primary);
             font-weight: bold;
             margin-right: 2px;
         }
@@ -230,7 +419,7 @@
 
         .folder-count {
             margin-left: 8px;
-            color: #ff6b6b;
+            color: var(--md-sys-color-error);
             font-weight: 600;
             font-size: 0.9em;
             display: none;
@@ -243,15 +432,15 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #667eea;
+            color: var(--md-sys-color-primary);
         }
 
         .loading-spinner {
             display: inline-block;
             width: 40px;
             height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 4px solid var(--md-sys-color-surface-variant);
+            border-top: 4px solid var(--md-sys-color-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 10px;
@@ -263,34 +452,38 @@
         }
 
         .error {
-            background: #fee;
-            color: #c33;
-            padding: 15px 20px;
-            border-radius: 10px;
-            border-left: 4px solid #c33;
+            background-color: var(--md-sys-color-error);
+            color: var(--md-sys-color-on-error);
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-weight: 500;
         }
 
         .empty {
             text-align: center;
             padding: 40px;
-            color: #999;
-            font-size: 1.2em;
+            color: var(--md-sys-color-on-surface-variant);
+            font-size: 1.1em;
         }
 
         .stats {
             text-align: center;
-            color: white;
-            margin-top: 30px;
-            opacity: 0.8;
-            font-size: 0.9em;
+            color: var(--md-sys-color-on-surface-variant);
+            margin-top: 24px;
+            font-size: 0.875em;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚡ Reminex</h1>
-            <p>高性能文件搜索引擎</p>
+            <div class="header-title">
+                <h1>⚡ Reminex</h1>
+                <p>高性能文件搜索引擎</p>
+            </div>
+            <button id="themeToggle" class="theme-toggle" aria-label="切换主题">
+                🌙
+            </button>
         </div>
 
         <div class="search-box">
@@ -307,7 +500,7 @@
             <div class="options">
                 <div class="option">
                     <label for="databaseSelect">数据库:</label>
-                    <select id="databaseSelect" style="width: 220px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px; cursor: pointer;">
+                    <select id="databaseSelect" class="db-select">
                         <option value="all">全部数据库</option>
                         <!-- Will be populated dynamically -->
                     </select>
@@ -322,13 +515,12 @@
                 </div>
                 <div class="option">
                     <label for="limitInput">结果限制:</label>
-                    <input type="number" id="limitInput" value="2000" min="1" max="10000" 
-                           style="width: 80px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                    <input type="number" id="limitInput" value="2000" min="1" max="10000" class="limit-input">
                 </div>
                 <div class="option">
                     <label for="rootPathInput">显示根路径:</label>
                     <input type="text" id="rootPathInput" placeholder="如: D:\ 或 /mnt/data" 
-                           style="width: 180px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
+                           class="root-path-input"
                            title="可选：替换显示结果中的原始根路径（支持盘符替换）">
                 </div>
             </div>
@@ -336,13 +528,13 @@
                 <div class="option">
                     <label for="includeFilterInput">必须包含:</label>
                     <input type="text" id="includeFilterInput" placeholder="用逗号分隔多个关键词" 
-                           style="width: 200px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
+                           class="filter-input"
                            title="筛选必须同时包含这些关键词的结果">
                 </div>
                 <div class="option">
                     <label for="excludeFilterInput">必须排除:</label>
                     <input type="text" id="excludeFilterInput" placeholder="用逗号分隔多个关键词" 
-                           style="width: 200px; padding: 5px; border: 1px solid #e0e0e0; border-radius: 5px;"
+                           class="filter-input"
                            title="排除包含这些关键词的结果">
                 </div>
                 <div style="margin-left: auto;">
@@ -355,12 +547,48 @@
             <!-- Results will be inserted here -->
         </div>
 
+        <!-- Scroll buttons -->
+        <div id="scrollButtons" class="scroll-buttons">
+            <button id="scrollToTop" class="scroll-button" aria-label="回到顶部" title="回到顶部">
+                ⬆️
+            </button>
+            <button id="scrollToBottom" class="scroll-button" aria-label="跳到底部" title="跳到底部">
+                ⬇️
+            </button>
+        </div>
+
         <div class="stats">
             <p>Powered by Reminex - AI-Powered File Indexing & Search Engine</p>
         </div>
     </div>
 
     <script>
+        // Theme Management
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        
+        // Load theme from localStorage or default to light
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme);
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                htmlElement.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+            } else {
+                htmlElement.removeAttribute('data-theme');
+                themeToggle.textContent = '🌙';
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        });
+
+        // Search functionality
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
         const resultsDiv = document.getElementById('results');
@@ -371,6 +599,45 @@
         const includeFilterInput = document.getElementById('includeFilterInput');
         const excludeFilterInput = document.getElementById('excludeFilterInput');
         const databaseSelect = document.getElementById('databaseSelect');
+        const scrollButtons = document.getElementById('scrollButtons');
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        const scrollToBottomBtn = document.getElementById('scrollToBottom');
+
+        // Scroll button functionality
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        scrollToBottomBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+        });
+
+        // Show/hide scroll buttons based on scroll position
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            const hasResults = resultsDiv.classList.contains('show');
+            const scrolled = window.scrollY > 300;
+            
+            if (hasResults && scrolled) {
+                scrollButtons.classList.add('show');
+            } else {
+                scrollButtons.classList.remove('show');
+            }
+
+            // Auto-hide after 3 seconds of no scrolling
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (window.scrollY > 300) {
+                    // Keep visible but could add a fade effect here
+                }
+            }, 3000);
+        });
 
         // Load available databases on page load
         async function loadDatabases() {
@@ -565,7 +832,7 @@
                         const childIsLast = index === node.children.length - 1;
                         childrenHtml += renderTree(child, newPrefix, childIsLast);
                     });
-                    html += `<div id="children-${nodeId}" class="tree-children" style="max-height: 10000px;">${childrenHtml}</div>`;
+                    html += `<div id="children-${nodeId}" class="tree-children" style="max-height: none;">${childrenHtml}</div>`;
                 }
             }
 
