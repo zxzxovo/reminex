@@ -276,6 +276,46 @@
             width: 200px;
         }
 
+        .advanced-toggle {
+            padding: 8px 16px;
+            background-color: transparent;
+            color: var(--md-sys-color-primary);
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .advanced-toggle:hover {
+            background-color: var(--md-sys-color-surface-variant);
+            border-color: var(--md-sys-color-primary);
+        }
+
+        .advanced-toggle-icon {
+            transition: transform 0.3s;
+            font-size: 12px;
+        }
+
+        .advanced-toggle-icon.expanded {
+            transform: rotate(-180deg);
+        }
+
+        .advanced-options {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, margin-top 0.3s ease-out;
+        }
+
+        .advanced-options.show {
+            max-height: 500px;
+            margin-top: 16px;
+        }
+
         .results {
             background-color: var(--md-sys-color-surface-container-low);
             border-radius: 28px;
@@ -479,7 +519,6 @@
         <div class="header">
             <div class="header-title">
                 <h1>⚡ Reminex</h1>
-                <p>高性能文件搜索引擎</p>
             </div>
             <button id="themeToggle" class="theme-toggle" aria-label="切换主题">
                 🌙
@@ -501,44 +540,53 @@
                 <div class="option">
                     <label for="databaseSelect">数据库:</label>
                     <select id="databaseSelect" class="db-select">
-                        <option value="all">全部数据库</option>
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
                 <div class="option">
-                    <input type="checkbox" id="nameOnly">
-                    <label for="nameOnly">仅搜索文件名</label>
-                </div>
-                <div class="option">
-                    <input type="checkbox" id="caseSensitive">
-                    <label for="caseSensitive">区分大小写</label>
-                </div>
-                <div class="option">
-                    <label for="limitInput">结果限制:</label>
-                    <input type="number" id="limitInput" value="2000" min="1" max="10000" class="limit-input">
-                </div>
-                <div class="option">
-                    <label for="rootPathInput">显示根路径:</label>
-                    <input type="text" id="rootPathInput" placeholder="如: D:\ 或 /mnt/data" 
-                           class="root-path-input"
-                           title="可选：替换显示结果中的原始根路径（支持盘符替换）">
-                </div>
-            </div>
-            <div class="options" style="margin-top: 10px;">
-                <div class="option">
-                    <label for="includeFilterInput">必须包含:</label>
-                    <input type="text" id="includeFilterInput" placeholder="用逗号分隔多个关键词" 
-                           class="filter-input"
-                           title="筛选必须同时包含这些关键词的结果">
-                </div>
-                <div class="option">
-                    <label for="excludeFilterInput">必须排除:</label>
-                    <input type="text" id="excludeFilterInput" placeholder="用逗号分隔多个关键词" 
-                           class="filter-input"
-                           title="排除包含这些关键词的结果">
+                    <button id="advancedToggle" class="advanced-toggle">
+                        <span class="advanced-toggle-icon">▼</span>
+                        <span>高级选项</span>
+                    </button>
                 </div>
                 <div style="margin-left: auto;">
                     <a href="/indexer" class="nav-button">📑 创建索引</a>
+                </div>
+            </div>
+            <div id="advancedOptions" class="advanced-options">
+                <div class="options">
+                    <div class="option">
+                        <input type="checkbox" id="nameOnly">
+                        <label for="nameOnly">仅搜索文件名</label>
+                    </div>
+                    <div class="option">
+                        <input type="checkbox" id="caseSensitive">
+                        <label for="caseSensitive">区分大小写</label>
+                    </div>
+                    <div class="option">
+                        <label for="limitInput">结果限制:</label>
+                        <input type="number" id="limitInput" value="2000" min="1" max="10000" class="limit-input">
+                    </div>
+                </div>
+                <div class="options" style="margin-top: 10px;">
+                    <div class="option">
+                        <label for="rootPathInput">显示根路径:</label>
+                        <input type="text" id="rootPathInput" placeholder="如: D:\ 或 /mnt/data" 
+                               class="root-path-input"
+                               title="可选：替换显示结果中的原始根路径（支持盘符替换）">
+                    </div>
+                    <div class="option">
+                        <label for="includeFilterInput">必须包含:</label>
+                        <input type="text" id="includeFilterInput" placeholder="用逗号分隔多个关键词" 
+                               class="filter-input"
+                               title="筛选必须同时包含这些关键词的结果">
+                    </div>
+                    <div class="option">
+                        <label for="excludeFilterInput">必须排除:</label>
+                        <input type="text" id="excludeFilterInput" placeholder="用逗号分隔多个关键词" 
+                               class="filter-input"
+                               title="排除包含这些关键词的结果">
+                    </div>
                 </div>
             </div>
         </div>
@@ -602,6 +650,15 @@
         const scrollButtons = document.getElementById('scrollButtons');
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const scrollToBottomBtn = document.getElementById('scrollToBottom');
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedOptions = document.getElementById('advancedOptions');
+
+        // Advanced options toggle functionality
+        advancedToggle.addEventListener('click', () => {
+            const icon = advancedToggle.querySelector('.advanced-toggle-icon');
+            advancedOptions.classList.toggle('show');
+            icon.classList.toggle('expanded');
+        });
 
         // Scroll button functionality
         scrollToTopBtn.addEventListener('click', () => {
@@ -645,20 +702,40 @@
                 const response = await fetch('/api/databases');
                 const data = await response.json();
                 
-                // Clear existing options except "all"
-                databaseSelect.innerHTML = '<option value="all">全部数据库</option>';
+                // Clear existing options
+                databaseSelect.innerHTML = '';
                 
                 // Add database options
-                data.databases.forEach(db => {
-                    const option = document.createElement('option');
-                    option.value = db.name;
-                    option.textContent = db.name;
-                    databaseSelect.appendChild(option);
-                });
-                
-                // Show database count in title
                 if (data.databases.length > 0) {
+                    // Add first database as default (selected)
+                    const firstOption = document.createElement('option');
+                    firstOption.value = data.databases[0].name;
+                    firstOption.textContent = data.databases[0].name;
+                    firstOption.selected = true;
+                    databaseSelect.appendChild(firstOption);
+                    
+                    // Add remaining databases
+                    for (let i = 1; i < data.databases.length; i++) {
+                        const option = document.createElement('option');
+                        option.value = data.databases[i].name;
+                        option.textContent = data.databases[i].name;
+                        databaseSelect.appendChild(option);
+                    }
+                    
+                    // Add "all" option at the end
+                    const allOption = document.createElement('option');
+                    allOption.value = 'all';
+                    allOption.textContent = '全部数据库';
+                    databaseSelect.appendChild(allOption);
+                    
+                    // Show database count in title
                     document.title = `Reminex - ${data.databases.length} 个数据库`;
+                } else {
+                    // No databases found, add placeholder
+                    const option = document.createElement('option');
+                    option.value = 'all';
+                    option.textContent = '无数据库';
+                    databaseSelect.appendChild(option);
                 }
             } catch (error) {
                 console.error('Failed to load databases:', error);
