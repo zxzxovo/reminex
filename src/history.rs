@@ -50,15 +50,15 @@ impl SearchHistory {
     /// 添加搜索记录
     pub fn add_entry(&self, item: SearchHistoryItem) -> Result<()> {
         let mut history = self.load_history()?;
-        
+
         // 插入到开头
         history.insert(0, item);
-        
+
         // 保持最大数量限制
         if history.len() > self.max_entries {
             history.truncate(self.max_entries);
         }
-        
+
         self.save_history(&history)
     }
 
@@ -75,7 +75,7 @@ impl SearchHistory {
 
     /// 清空历史记录
     pub fn clear(&self) -> Result<()> {
-        self.save_history(&vec![])
+        self.save_history(&[])
     }
 
     /// 删除指定索引的记录

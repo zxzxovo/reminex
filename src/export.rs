@@ -139,28 +139,32 @@ impl ExportedSearchResults {
     }
 }
 
+/// 搜索结果转换参数
+#[derive(Debug)]
+pub struct ConvertParams {
+    pub query: String,
+    pub selected_db: String,
+    pub name_only: bool,
+    pub case_sensitive: bool,
+    pub limit: Option<usize>,
+    pub include_filters: Vec<String>,
+    pub exclude_filters: Vec<String>,
+    pub keyword_results: Vec<crate::web::KeywordResults>,
+}
+
 /// 从 Web API 的搜索结果转换为导出格式
-pub fn convert_from_web_results(
-    query: String,
-    selected_db: String,
-    name_only: bool,
-    case_sensitive: bool,
-    limit: Option<usize>,
-    include_filters: Vec<String>,
-    exclude_filters: Vec<String>,
-    keyword_results: Vec<crate::web::KeywordResults>,
-) -> ExportedSearchResults {
+pub fn convert_from_web_results(params: ConvertParams) -> ExportedSearchResults {
     let mut export = ExportedSearchResults::new(
-        query,
-        selected_db,
-        name_only,
-        case_sensitive,
-        limit,
-        include_filters,
-        exclude_filters,
+        params.query,
+        params.selected_db,
+        params.name_only,
+        params.case_sensitive,
+        params.limit,
+        params.include_filters,
+        params.exclude_filters,
     );
 
-    for kr in keyword_results {
+    for kr in params.keyword_results {
         let files = flatten_tree_to_files(&kr.tree);
         export.add_keyword_group(kr.keyword, files);
     }

@@ -516,16 +516,16 @@ struct ExportRequest {
 }
 
 async fn export_results_handler(Json(req): Json<ExportRequest>) -> impl IntoResponse {
-    let exported = export::convert_from_web_results(
-        req.query,
-        req.selected_db,
-        req.name_only,
-        req.case_sensitive,
-        req.limit,
-        req.include_filters,
-        req.exclude_filters,
-        req.results,
-    );
+    let exported = export::convert_from_web_results(export::ConvertParams {
+        query: req.query,
+        selected_db: req.selected_db,
+        name_only: req.name_only,
+        case_sensitive: req.case_sensitive,
+        limit: req.limit,
+        include_filters: req.include_filters,
+        exclude_filters: req.exclude_filters,
+        keyword_results: req.results,
+    });
 
     match exported.to_toml() {
         Ok(toml_content) => Json(serde_json::json!({
