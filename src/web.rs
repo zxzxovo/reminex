@@ -67,6 +67,7 @@ pub struct KeywordResults {
     pub keyword: String,
     pub count: usize,
     pub tree: TreeNodeJson,
+    pub root_path: String,
 }
 
 /// Index request from web client
@@ -274,17 +275,20 @@ async fn search_handler(
                     is_leaf: true,
                     children: vec![],
                 },
+                root_path: String::new(),
             });
             continue;
         }
 
         let tree = build_tree(&items, &keyword);
+        let root_path = tree.path.to_string_lossy().to_string();
         let tree_json = TreeNodeJson::from(&tree);
 
         keyword_results.push(KeywordResults {
             keyword,
             count: items.len(),
             tree: tree_json,
+            root_path,
         });
     }
 

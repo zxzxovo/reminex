@@ -341,6 +341,102 @@
             margin-top: 16px;
         }
 
+        .compact-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 16px;
+        }
+
+        .compact-label {
+            font-size: 13px;
+            color: var(--md-sys-color-on-surface);
+            white-space: nowrap;
+        }
+
+        .compact-buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .compact-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .compact-btn:hover {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+
+        .compact-btn.active {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border-color: var(--md-sys-color-primary);
+        }
+
+        /* Compact mode styles */
+        body.compact-relaxed .result-section {
+            margin-bottom: 24px;
+        }
+
+        body.compact-relaxed .result-header {
+            padding: 16px 24px;
+        }
+
+        body.compact-relaxed .tree {
+            font-size: 14px;
+            line-height: 1.7;
+            padding: 16px 20px;
+        }
+
+        body.compact-relaxed .tree-node {
+            margin: 3px 0;
+        }
+
+        body.compact-normal .result-section {
+            margin-bottom: 16px;
+        }
+
+        body.compact-normal .result-header {
+            padding: 12px 20px;
+        }
+
+        body.compact-normal .tree {
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 12px 16px;
+        }
+
+        body.compact-normal .tree-node {
+            margin: 1px 0;
+        }
+
+        body.compact-tight .result-section {
+            margin-bottom: 12px;
+        }
+
+        body.compact-tight .result-header {
+            padding: 10px 16px;
+        }
+
+        body.compact-tight .tree {
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 10px 12px;
+        }
+
+        body.compact-tight .tree-node {
+            margin: 0;
+        }
+
         .results {
             background-color: var(--md-sys-color-surface-container-low);
             border-radius: 28px;
@@ -398,50 +494,102 @@
         }
 
         .result-section {
-            margin-bottom: 24px;
+            margin-bottom: 16px;
+            background-color: var(--md-sys-color-surface-container);
+            border-radius: 20px;
+            box-shadow: var(--md-sys-elevation-1);
+            overflow: hidden;
+            transition: box-shadow 0.3s, background-color 0.3s;
+        }
+
+        .result-section:hover {
+            box-shadow: var(--md-sys-elevation-2);
         }
 
         .result-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 24px;
+            padding: 12px 20px;
             background-color: var(--md-sys-color-primary-container);
             color: var(--md-sys-color-on-primary-container);
-            border-radius: 16px;
-            margin-bottom: 16px;
             transition: background-color 0.3s, color 0.3s;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .result-header:hover {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+
+        .result-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .result-toggle {
+            font-size: 0.75em;
+            transition: transform 0.3s;
+        }
+
+        .result-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .root-path-hint {
+            font-size: 0.7em;
+            font-weight: 400;
+            opacity: 0.75;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin-left: 4px;
+            padding: 2px 6px;
+            background-color: rgba(0, 0, 0, 0.15);
+            border-radius: 6px;
         }
 
         .result-header h3 {
-            font-size: 1.25em;
+            font-size: 1.1em;
             font-weight: 500;
+            margin: 0;
         }
 
         .result-count {
             background-color: var(--md-sys-color-primary);
             color: var(--md-sys-color-on-primary);
-            padding: 4px 16px;
-            border-radius: 16px;
-            font-size: 0.875em;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
             font-weight: 500;
+        }
+
+        .result-content {
+            max-height: 100000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
+            opacity: 1;
+        }
+
+        .result-content.collapsed {
+            max-height: 0;
+            opacity: 0;
         }
 
         .tree {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            padding: 16px;
-            background-color: var(--md-sys-color-surface);
-            border-radius: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 12px 16px;
+            background-color: transparent;
             overflow-x: auto;
-            overflow-y: visible; /* Ensure vertical content is fully visible */
-            border: 1px solid var(--md-sys-color-outline-variant);
-            transition: background-color 0.3s, border-color 0.3s;
+            overflow-y: visible;
+            transition: background-color 0.3s;
         }
 
         .tree-node {
-            margin: 2px 0;
+            margin: 1px 0;
             white-space: pre;
         }
 
@@ -450,10 +598,108 @@
             font-weight: 500;
             cursor: pointer;
             user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .tree-folder:hover {
             color: var(--md-sys-color-secondary);
+        }
+
+        .folder-path-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 0;
+            transition: background-color 0.2s, transform 0.2s;
+            opacity: 0;
+        }
+
+        .tree-folder:hover .folder-path-btn {
+            opacity: 1;
+        }
+
+        .folder-path-btn:hover {
+            background-color: var(--md-sys-color-tertiary-container);
+            transform: scale(1.15);
+        }
+
+        .folder-path-btn:active {
+            transform: scale(0.95);
+        }
+
+        .path-popup {
+            position: fixed;
+            background-color: var(--md-sys-color-surface-container-high);
+            color: var(--md-sys-color-on-surface);
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: var(--md-sys-elevation-3);
+            z-index: 3000;
+            max-width: 600px;
+            word-wrap: break-word;
+            display: none;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .path-popup.show {
+            display: block;
+        }
+
+        .path-popup-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--md-sys-color-primary);
+            font-size: 12px;
+        }
+
+        .path-popup-content {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .path-segment {
+            color: var(--md-sys-color-on-surface);
+        }
+
+        .path-separator {
+            color: #1976D2;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 0 4px;
+        }
+
+        .path-popup-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--md-sys-color-on-surface);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 2px 6px;
+            line-height: 1;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .path-popup-close:hover {
+            background-color: var(--md-sys-color-surface-variant);
         }
 
         .tree-file {
@@ -462,6 +708,9 @@
 
         .tree-branch {
             color: var(--md-sys-color-outline);
+            font-family: monospace;
+            white-space: pre;
+            flex-shrink: 0;
         }
 
         .tree-toggle {
@@ -475,6 +724,10 @@
         .tree-children {
             transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
             overflow: hidden;
+        }
+        
+        .tree-node .tree-children .tree-children {
+            margin-left: 16px;
         }
 
         .tree-children.collapsed {
@@ -736,6 +989,14 @@
                         <span>高级选项</span>
                     </button>
                 </div>
+                <div class="compact-control">
+                    <span class="compact-label">紧凑度:</span>
+                    <div class="compact-buttons">
+                        <button class="compact-btn" data-compact="relaxed">宽松</button>
+                        <button class="compact-btn active" data-compact="normal">标准</button>
+                        <button class="compact-btn" data-compact="tight">紧凑</button>
+                    </div>
+                </div>
                 <div style="margin-left: auto;">
                     <a href="/indexer" class="nav-button">📑 创建索引</a>
                 </div>
@@ -829,6 +1090,13 @@
                 </div>
             </div>
         </div>
+
+        <!-- Path Popup -->
+        <div id="pathPopup" class="path-popup">
+            <button class="path-popup-close" id="pathPopupClose">✕</button>
+            <div class="path-popup-header">完整路径</div>
+            <div class="path-popup-content" id="pathPopupContent"></div>
+        </div>
     </div>
 
     <script>
@@ -888,6 +1156,37 @@
         const downloadExportButton = document.getElementById('downloadExportButton');
 
         let lastSearchResults = null;
+
+        // Compact mode functionality
+        const compactButtons = document.querySelectorAll('.compact-btn');
+        
+        // Load saved compact mode or default to 'normal'
+        const savedCompactMode = localStorage.getItem('compactMode') || 'normal';
+        document.body.classList.add('compact-' + savedCompactMode);
+        compactButtons.forEach(btn => {
+            if (btn.getAttribute('data-compact') === savedCompactMode) {
+                btn.classList.add('active');
+            }
+        });
+        
+        compactButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-compact');
+                
+                // Remove all compact classes
+                document.body.classList.remove('compact-relaxed', 'compact-normal', 'compact-tight');
+                
+                // Add selected class
+                document.body.classList.add('compact-' + mode);
+                
+                // Update button states
+                compactButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Save to localStorage
+                localStorage.setItem('compactMode', mode);
+            });
+        });
 
         // Advanced options toggle functionality
         advancedToggle.addEventListener('click', () => {
@@ -1219,15 +1518,38 @@
             nodeIdCounter = 0;
 
             let html = '';
-            for (const result of results) {
+            for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                const rootPathHtml = result.root_path ? `<span class="root-path-hint">${escapeHtml(result.root_path)}</span>` : '';
+                
+                // Render children of root node directly (skip root node itself)
+                let treeContent = '';
+                if (result.tree && result.tree.children && result.tree.children.length > 0) {
+                    result.tree.children.forEach((child, index) => {
+                        const isLast = index === result.tree.children.length - 1;
+                        treeContent += renderTree(child, '', isLast);
+                    });
+                } else if (result.tree && result.tree.is_leaf) {
+                    // If root itself is a file (single result), show it
+                    treeContent = `<div class="tree-node"><span class="tree-file">${escapeHtml(result.tree.name)}</span></div>`;
+                } else {
+                    treeContent = '<div class="empty">无结果</div>';
+                }
+                
                 html += `
                     <div class="result-section">
-                        <div class="result-header">
-                            <h3>「${escapeHtml(result.keyword)}」</h3>
+                        <div class="result-header" data-result-id="${i}">
+                            <div class="result-header-left">
+                                <span class="result-toggle">▼</span>
+                                <h3>「${escapeHtml(result.keyword)}」</h3>
+                                ${rootPathHtml}
+                            </div>
                             <span class="result-count">${result.count} 个结果</span>
                         </div>
-                        <div class="tree">
-                            ${renderTree(result.tree, '', true)}
+                        <div class="result-content" id="result-content-${i}">
+                            <div class="tree">
+                                ${treeContent}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1235,11 +1557,31 @@
 
             resultsDiv.innerHTML = html;
             
+            // Add click handlers for result section headers
+            const resultHeaders = document.querySelectorAll('.result-header');
+            resultHeaders.forEach(header => {
+                header.addEventListener('click', function(e) {
+                    const resultId = this.getAttribute('data-result-id');
+                    const content = document.getElementById('result-content-' + resultId);
+                    const toggle = this.querySelector('.result-toggle');
+                    
+                    if (content) {
+                        content.classList.toggle('collapsed');
+                        toggle.classList.toggle('collapsed');
+                    }
+                });
+            });
+            
             // Add click handlers for collapsible folders
             const folders = document.querySelectorAll('.tree-folder');
             
             folders.forEach(folder => {
                 folder.addEventListener('click', function(e) {
+                    // Don't toggle if clicking the path button
+                    if (e.target.classList.contains('folder-path-btn')) {
+                        return;
+                    }
+                    
                     e.stopPropagation();
                     const nodeId = this.getAttribute('data-node-id');
                     const children = document.getElementById('children-' + nodeId);
@@ -1317,10 +1659,10 @@
                 const toggleIcon = shouldAutoCollapse ? '▶' : toggle;
                 const countClass = shouldAutoCollapse ? ' show' : '';
                 
-                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}"><span class="tree-toggle">${toggleIcon}</span>${escapeHtml(node.name + '/')}<span class="folder-count${countClass}">(${fileCount})</span></span></div>`;
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}" data-path="${escapeHtml(node.path)}"><span class="tree-toggle">${toggleIcon}</span>${escapeHtml(node.name + '/')}<span class="folder-count${countClass}">(${fileCount})</span><button class="folder-path-btn" title="显示完整路径">📍</button></span></div>`;
                 
                 if (hasChildren) {
-                    const newPrefix = prefix + (isLast ? '   ' : '│  ');
+                    const newPrefix = prefix + (isLast ? '  ' : '│ ');
                     let childrenHtml = '';
                     node.children.forEach((child, index) => {
                         const childIsLast = index === node.children.length - 1;
@@ -1341,6 +1683,75 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Path popup functionality
+        const pathPopup = document.getElementById('pathPopup');
+        const pathPopupContent = document.getElementById('pathPopupContent');
+        const pathPopupClose = document.getElementById('pathPopupClose');
+
+        // Close popup when clicking close button
+        pathPopupClose.addEventListener('click', () => {
+            pathPopup.classList.remove('show');
+        });
+
+        // Close popup when clicking outside
+        document.addEventListener('click', (e) => {
+            if (pathPopup.classList.contains('show') && 
+                !pathPopup.contains(e.target) && 
+                !e.target.classList.contains('folder-path-btn')) {
+                pathPopup.classList.remove('show');
+            }
+        });
+
+        // Add event delegation for path buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('folder-path-btn')) {
+                e.stopPropagation();
+                const folder = e.target.closest('.tree-folder');
+                const fullPath = folder.getAttribute('data-path');
+                
+                if (fullPath) {
+                    // Parse path and create segments with arrow separators
+                    const pathParts = fullPath.split(/[/\\]/);
+                    let pathHtml = '';
+                    
+                    pathParts.forEach((part, index) => {
+                        if (part) {
+                            pathHtml += `<span class="path-segment">${escapeHtml(part)}</span>`;
+                            if (index < pathParts.length - 1 && pathParts[index + 1]) {
+                                pathHtml += `<span class="path-separator">→</span>`;
+                            }
+                        }
+                    });
+                    
+                    pathPopupContent.innerHTML = pathHtml;
+                    
+                    // Position popup near the button
+                    const rect = e.target.getBoundingClientRect();
+                    const popupWidth = 600; // max-width from CSS
+                    
+                    let left = rect.right + 10;
+                    let top = rect.top;
+                    
+                    // Adjust if would go off screen
+                    if (left + popupWidth > window.innerWidth) {
+                        left = rect.left - popupWidth - 10;
+                    }
+                    
+                    if (left < 10) {
+                        left = 10;
+                    }
+                    
+                    if (top + 100 > window.innerHeight) {
+                        top = window.innerHeight - 110;
+                    }
+                    
+                    pathPopup.style.left = left + 'px';
+                    pathPopup.style.top = top + 'px';
+                    pathPopup.classList.add('show');
+                }
+            }
+        });
     </script>
 </body>
 </html>

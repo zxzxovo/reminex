@@ -1,6 +1,6 @@
 [package]
 name = "reminex"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 authors = ["Zhixia <zhixiaovo@gmail.com>"]
 description = "A high-performance file indexing and searching tool powered by SQLite"
