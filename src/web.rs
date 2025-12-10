@@ -5,12 +5,16 @@ use axum::{
     response::{Html, IntoResponse, Json},
     routing::{get, post},
 };
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use tower_http::services::ServeDir;
 
 use crate::db::Database;
+use crate::export;
+use crate::history::{SearchHistory, SearchHistoryItem};
 use crate::indexer;
 use crate::searcher::{
     SearchConfig, SearchResult, TreeNode, build_tree, parse_search_keywords,
@@ -21,6 +25,7 @@ use crate::searcher::{
 #[derive(Clone)]
 pub struct AppState {
     pub db_paths: Vec<PathBuf>,
+    pub history: Arc<Mutex<SearchHistory>>,
 }
 
 /// Search request from web client
@@ -57,7 +62,7 @@ pub struct SearchResponse {
 }
 
 /// Results for a single keyword
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct KeywordResults {
     pub keyword: String,
     pub count: usize,
@@ -95,7 +100,7 @@ pub struct IndexResponse {
 }
 
 /// JSON-serializable tree node
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TreeNodeJson {
     pub name: String,
     pub path: String,
@@ -283,6 +288,25 @@ async fn search_handler(
         });
     }
 
+    // 自动保存到历史记录（异步执行，不阻塞响应）
+    let total_count: usize = keyword_results.iter().map(|kr| kr.count).sum();
+    if total_count > 0 {
+        let history_item = SearchHistoryItem {
+            query: params.query.clone(),
+            selected_db: params.selected_db.clone(),
+            timestamp: Utc::now(),
+            result_count: total_count,
+            name_only: params.name_only,
+            case_sensitive: params.case_sensitive,
+        };
+
+        let history = state.history.clone();
+        tokio::spawn(async move {
+            let history = history.lock().await;
+            let _ = history.add_entry(history_item);
+        });
+    }
+
     Json(SearchResponse {
         success: true,
         results: keyword_results,
@@ -408,9 +432,120 @@ async fn list_databases_handler(State(state): State<Arc<AppState>>) -> impl Into
     Json(DatabaseListResponse { databases })
 }
 
+/// Get search history
+async fn get_history_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let history = state.history.lock().await;
+    match history.get_all() {
+        Ok(items) => Json(serde_json::json!({
+            "success": true,
+            "history": items
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Failed to get history: {}", e)
+        })),
+    }
+}
+
+/// Add search history entry
+#[derive(Debug, Deserialize)]
+struct AddHistoryRequest {
+    query: String,
+    selected_db: String,
+    result_count: usize,
+    #[serde(default)]
+    name_only: bool,
+    #[serde(default)]
+    case_sensitive: bool,
+}
+
+async fn add_history_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<AddHistoryRequest>,
+) -> impl IntoResponse {
+    let item = SearchHistoryItem {
+        query: req.query,
+        selected_db: req.selected_db,
+        timestamp: Utc::now(),
+        result_count: req.result_count,
+        name_only: req.name_only,
+        case_sensitive: req.case_sensitive,
+    };
+
+    let history = state.history.lock().await;
+    match history.add_entry(item) {
+        Ok(_) => Json(serde_json::json!({
+            "success": true
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Failed to add history: {}", e)
+        })),
+    }
+}
+
+/// Clear search history
+async fn clear_history_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let history = state.history.lock().await;
+    match history.clear() {
+        Ok(_) => Json(serde_json::json!({
+            "success": true
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Failed to clear history: {}", e)
+        })),
+    }
+}
+
+/// Export search results
+#[derive(Debug, Deserialize)]
+struct ExportRequest {
+    query: String,
+    selected_db: String,
+    #[serde(default)]
+    name_only: bool,
+    #[serde(default)]
+    case_sensitive: bool,
+    limit: Option<usize>,
+    #[serde(default)]
+    include_filters: Vec<String>,
+    #[serde(default)]
+    exclude_filters: Vec<String>,
+    results: Vec<KeywordResults>,
+}
+
+async fn export_results_handler(Json(req): Json<ExportRequest>) -> impl IntoResponse {
+    let exported = export::convert_from_web_results(
+        req.query,
+        req.selected_db,
+        req.name_only,
+        req.case_sensitive,
+        req.limit,
+        req.include_filters,
+        req.exclude_filters,
+        req.results,
+    );
+
+    match exported.to_toml() {
+        Ok(toml_content) => Json(serde_json::json!({
+            "success": true,
+            "toml": toml_content
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "error": format!("Failed to export: {}", e)
+        })),
+    }
+}
+
 /// Create and configure the web application router
 pub fn create_app(db_paths: Vec<PathBuf>) -> Router {
-    let state = Arc::new(AppState { db_paths });
+    let history = SearchHistory::new(SearchHistory::default_path(), 100);
+    let state = Arc::new(AppState {
+        db_paths,
+        history: Arc::new(Mutex::new(history)),
+    });
 
     Router::new()
         .route("/", get(root_handler))
@@ -418,6 +553,10 @@ pub fn create_app(db_paths: Vec<PathBuf>) -> Router {
         .route("/api/search", get(search_handler))
         .route("/api/index", post(index_handler))
         .route("/api/databases", get(list_databases_handler))
+        .route("/api/history", get(get_history_handler))
+        .route("/api/history", post(add_history_handler))
+        .route("/api/history/clear", post(clear_history_handler))
+        .route("/api/export", post(export_results_handler))
         .route("/health", get(health_handler))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state)
