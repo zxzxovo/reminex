@@ -1250,12 +1250,14 @@
                         children.classList.toggle('collapsed');
                         if (children.classList.contains('collapsed')) {
                             toggle.textContent = '▶';
+                            children.style.maxHeight = '0';
                             // Show count when collapsed
                             if (countSpan) {
                                 countSpan.classList.add('show');
                             }
                         } else {
                             toggle.textContent = '▼';
+                            children.style.maxHeight = 'none';
                             // Hide count when expanded
                             if (countSpan) {
                                 countSpan.classList.remove('show');
@@ -1282,7 +1284,14 @@
 
         let nodeIdCounter = 0;
 
-        function renderTree(node, prefix = '', isLast = true) {
+        // Check if a node is a leaf folder (all children are files)
+        function isLeafFolder(node) {
+            if (!node || node.is_leaf) return false;
+            if (!node.children || node.children.length === 0) return false;
+            return node.children.every(child => child.is_leaf);
+        }
+
+        function renderTree(node, prefix = '', isLast = true, depth = 0) {
             if (!node) return '';
 
             const connector = isLast ? '└─ ' : '├─ ';
@@ -1299,16 +1308,28 @@
                 const toggle = hasChildren ? '▼' : '';
                 const fileCount = countFiles(node);
                 
-                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}"><span class="tree-toggle">${toggle}</span>${escapeHtml(node.name + '/')}<span class="folder-count">(${fileCount})</span></span></div>`;
+                // Auto-collapse logic:
+                // - Must be at depth >= 3 (0-indexed, so depth >= 2 means 3+ levels)
+                // - Must be a leaf folder (all children are files)
+                // - Must have 8 or more files
+                const shouldAutoCollapse = depth >= 2 && isLeafFolder(node) && fileCount >= 8;
+                const collapseClass = shouldAutoCollapse ? ' collapsed' : '';
+                const toggleIcon = shouldAutoCollapse ? '▶' : toggle;
+                const countClass = shouldAutoCollapse ? ' show' : '';
+                
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}"><span class="tree-toggle">${toggleIcon}</span>${escapeHtml(node.name + '/')}<span class="folder-count${countClass}">(${fileCount})</span></span></div>`;
                 
                 if (hasChildren) {
                     const newPrefix = prefix + (isLast ? '   ' : '│  ');
                     let childrenHtml = '';
                     node.children.forEach((child, index) => {
                         const childIsLast = index === node.children.length - 1;
-                        childrenHtml += renderTree(child, newPrefix, childIsLast);
+                        childrenHtml += renderTree(child, newPrefix, childIsLast, depth + 1);
                     });
-                    html += `<div id="children-${nodeId}" class="tree-children" style="max-height: none;">${childrenHtml}</div>`;
+                    
+                    // Apply collapsed class and inline style if auto-collapsing
+                    const childrenStyle = shouldAutoCollapse ? ' style="max-height: 0;"' : ' style="max-height: none;"';
+                    html += `<div id="children-${nodeId}" class="tree-children${collapseClass}"${childrenStyle}>${childrenHtml}</div>`;
                 }
             }
 
