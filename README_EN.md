@@ -88,7 +88,7 @@ reminex index -p /path/to/directory -d myfiles.reminex.db --no-metadata
 # Basic search
 reminex search -d myfiles.reminex.db keyword
 
-# Multi-keyword search (supports ; or space delimiter)
+# Multi-keyword search (supports ; , and Chinese semicolon/comma delimiters)
 reminex search -d myfiles.reminex.db "photo;2024"
 
 # Tree display

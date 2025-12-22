@@ -88,7 +88,7 @@ $ reminex search -d myfiles.reminex.db -t photo
 $ reminex search -d myfiles.reminex.db
 🔍 reminex 搜索模式
    数据库: myfiles.reminex.db
-   输入关键词搜索，多个关键词用 ; 或空格分隔
+   输入关键词搜索，多个关键词用 ; , 或中文分号、逗号分隔
    输入 :q 退出
 
 搜索> photo; video

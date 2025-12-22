@@ -72,7 +72,8 @@ impl Default for SearchConfig {
 
 /// Splits user input into multiple search keywords.
 ///
-/// Supports multiple delimiters: semicolon (;；), space, comma, and combinations.
+/// Supports multiple delimiters: semicolon (;；), comma (,，), and tab.
+/// Note: Space is NOT used as delimiter to support file/folder names with spaces.
 ///
 /// # Arguments
 /// * `input` - User input string containing one or more keywords
@@ -84,12 +85,12 @@ impl Default for SearchConfig {
 /// ```
 /// use reminex::searcher::parse_search_keywords;
 ///
-/// let keywords = parse_search_keywords("photo; video image");
+/// let keywords = parse_search_keywords("photo; video,image");
 /// assert_eq!(keywords, vec!["photo", "video", "image"]);
 /// ```
 pub fn parse_search_keywords(input: &str) -> Vec<String> {
     input
-        .split([';', '；', ' ', ',', '，', '\t'])
+        .split([';', '；', ',', '，', '\t'])
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string())
@@ -563,9 +564,10 @@ mod tests {
             vec!["photo", "video", "music"]
         );
 
+        // Test with space in keyword (should not split)
         assert_eq!(
-            parse_search_keywords("photo video music"),
-            vec!["photo", "video", "music"]
+            parse_search_keywords("my photo,video music"),
+            vec!["my photo", "video music"]
         );
 
         assert_eq!(
