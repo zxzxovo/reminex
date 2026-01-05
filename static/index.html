@@ -35,6 +35,8 @@
             --md-sys-elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
             --md-sys-elevation-2: 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
             --md-sys-elevation-3: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+            /* Highlight color for matched text in tree (default orange-red) */
+            --match-color: #ff7043;
         }
 
         [data-theme="dark"] {
@@ -706,6 +708,12 @@
             color: var(--md-sys-color-on-surface);
         }
 
+        /* Highlighted match in tree (uses CSS variable --match-color) */
+        .match-highlight {
+            color: var(--match-color);
+            font-weight: 600;
+        }
+
         .tree-branch {
             color: var(--md-sys-color-outline);
             font-family: monospace;
@@ -1035,6 +1043,12 @@
                                class="filter-input"
                                title="排除包含这些关键词的结果">
                     </div>
+                    <div class="option" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="highlightMatches">
+                        <label for="highlightMatches">高亮</label>
+                        <input type="color" id="highlightColorPicker" title="选择高亮颜色" style="width:36px;height:28px;padding:0;border:0;background:transparent;">
+                        <input type="text" id="highlightColorInput" placeholder="支持 #RRGGBB、rgb(...)、hsl(...)" class="filter-input" style="width:180px;" title="输入颜色值，例如 #ff7043、rgb(255,112,67)、hsl(14,100%,63%)">
+                    </div>
                 </div>
             </div>
         </div>
@@ -1154,6 +1168,55 @@
         const exportContent = document.getElementById('exportContent');
         const copyExportButton = document.getElementById('copyExportButton');
         const downloadExportButton = document.getElementById('downloadExportButton');
+        const highlightMatchesCheckbox = document.getElementById('highlightMatches');
+        const highlightColorPicker = document.getElementById('highlightColorPicker');
+        const highlightColorInput = document.getElementById('highlightColorInput');
+
+        // Initialize highlight color from CSS variable
+        (function initHighlightColor() {
+            const cssColor = getComputedStyle(document.documentElement).getPropertyValue('--match-color').trim() || '#ff7043';
+            // If cssColor is hex, set picker; otherwise keep picker default
+            try {
+                if (cssColor.startsWith('#') && /^#[0-9a-fA-F]{3,8}$/.test(cssColor)) {
+                    highlightColorPicker.value = cssColor.length === 4 ? cssColor : cssColor;
+                } else {
+                    // fallback picker value
+                    highlightColorPicker.value = '#ff7043';
+                }
+            } catch (e) {
+                highlightColorPicker.value = '#ff7043';
+            }
+            highlightColorInput.value = cssColor;
+        })();
+
+        // Picker -> update CSS var and text input
+        highlightColorPicker.addEventListener('input', (e) => {
+            const v = e.target.value;
+            document.documentElement.style.setProperty('--match-color', v);
+            highlightColorInput.value = v;
+        });
+
+        // Manual input -> accept hex, rgb(), rgba(), hsl(), color names
+        highlightColorInput.addEventListener('change', (e) => {
+            const v = e.target.value.trim();
+            if (!v) return;
+            // Basic validation: accept #hex, rgb(), rgba(), hsl(), hsla(), or words
+            const ok = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v)
+                || /^rgba?\(/i.test(v)
+                || /^hsla?\(/i.test(v)
+                || /^[a-zA-Z]+$/.test(v);
+            if (!ok) {
+                alert('不支持的颜色格式，请输入 #RRGGBB、rgb(...) 或 hsl(...) 等');
+                // revert to current CSS var
+                highlightColorInput.value = getComputedStyle(document.documentElement).getPropertyValue('--match-color').trim();
+                return;
+            }
+            document.documentElement.style.setProperty('--match-color', v);
+            // If it's hex, update picker
+            if (v.startsWith('#') && /^#[0-9a-fA-F]{6}$/.test(v)) {
+                try { highlightColorPicker.value = v; } catch (e) { }
+            }
+        });
 
         let lastSearchResults = null;
 
@@ -1527,11 +1590,11 @@
                 if (result.tree && result.tree.children && result.tree.children.length > 0) {
                     result.tree.children.forEach((child, index) => {
                         const isLast = index === result.tree.children.length - 1;
-                        treeContent += renderTree(child, '', isLast);
+                        treeContent += renderTree(child, '', isLast, 0, result.keyword, highlightMatchesCheckbox && highlightMatchesCheckbox.checked, caseSensitiveCheckbox.checked);
                     });
                 } else if (result.tree && result.tree.is_leaf) {
                     // If root itself is a file (single result), show it
-                    treeContent = `<div class="tree-node"><span class="tree-file">${escapeHtml(result.tree.name)}</span></div>`;
+                    treeContent = `<div class="tree-node"><span class="tree-file">${highlightText(result.tree.name, result.keyword, highlightMatchesCheckbox && highlightMatchesCheckbox.checked, caseSensitiveCheckbox.checked)}</span></div>`;
                 } else {
                     treeContent = '<div class="empty">无结果</div>';
                 }
@@ -1633,7 +1696,7 @@
             return node.children.every(child => child.is_leaf);
         }
 
-        function renderTree(node, prefix = '', isLast = true, depth = 0) {
+        function renderTree(node, prefix = '', isLast = true, depth = 0, keyword = '', highlightEnabled = false, caseSensitive = false) {
             if (!node) return '';
 
             const connector = isLast ? '└─ ' : '├─ ';
@@ -1643,7 +1706,7 @@
             
             if (node.is_leaf) {
                 // File node - no toggle
-                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-file">${escapeHtml(node.name)}</span></div>`;
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-file">${highlightText(node.name, keyword, highlightEnabled, caseSensitive)}</span></div>`;
             } else {
                 // Folder node - with toggle
                 const hasChildren = node.children && node.children.length > 0;
@@ -1659,14 +1722,14 @@
                 const toggleIcon = shouldAutoCollapse ? '▶' : toggle;
                 const countClass = shouldAutoCollapse ? ' show' : '';
                 
-                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}" data-path="${escapeHtml(node.path)}"><span class="tree-toggle">${toggleIcon}</span>${escapeHtml(node.name + '/')}<span class="folder-count${countClass}">(${fileCount})</span><button class="folder-path-btn" title="显示完整路径">📍</button></span></div>`;
+                html = `<div class="tree-node"><span class="tree-branch">${prefix}${connector}</span><span class="tree-folder" data-node-id="${nodeId}" data-path="${escapeHtml(node.path)}"><span class="tree-toggle">${toggleIcon}</span>${highlightText(node.name + '/', keyword, highlightEnabled, caseSensitive)}<span class="folder-count${countClass}">(${fileCount})</span><button class="folder-path-btn" title="显示完整路径">📍</button></span></div>`;
                 
                 if (hasChildren) {
                     const newPrefix = prefix + (isLast ? '  ' : '│ ');
                     let childrenHtml = '';
                     node.children.forEach((child, index) => {
                         const childIsLast = index === node.children.length - 1;
-                        childrenHtml += renderTree(child, newPrefix, childIsLast, depth + 1);
+                        childrenHtml += renderTree(child, newPrefix, childIsLast, depth + 1, keyword, highlightEnabled, caseSensitive);
                     });
                     
                     // Apply collapsed class and inline style if auto-collapsing
@@ -1682,6 +1745,36 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Highlight occurrences of keyword in text
+        function highlightText(text, keyword, enabled, caseSensitive) {
+            if (!enabled) return escapeHtml(text);
+            if (!keyword) return escapeHtml(text);
+
+            const original = text || '';
+            const k = caseSensitive ? keyword : keyword.toLowerCase();
+            const src = caseSensitive ? original : original.toLowerCase();
+
+            let parts = [];
+            let idx = 0;
+            let pos = src.indexOf(k, idx);
+            while (pos !== -1 && k.length > 0) {
+                // push before
+                if (pos > idx) {
+                    parts.push(escapeHtml(original.slice(idx, pos)));
+                }
+                // push highlighted match
+                const matchText = original.slice(pos, pos + k.length);
+                parts.push(`<span class="match-highlight">${escapeHtml(matchText)}</span>`);
+                idx = pos + k.length;
+                pos = src.indexOf(k, idx);
+            }
+            if (idx < original.length) {
+                parts.push(escapeHtml(original.slice(idx)));
+            }
+
+            return parts.join('');
         }
 
         // Path popup functionality
