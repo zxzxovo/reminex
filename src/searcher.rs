@@ -116,9 +116,12 @@ pub fn parse_search_keywords(input: &str) -> Vec<String> {
 pub fn parse_search_keywords_with_delimiters(input: &str, delimiters: &[char]) -> Vec<String> {
     if delimiters.is_empty() {
         // If no delimiters, treat the whole input as a single keyword
-        return vec![input.trim().to_string()].into_iter().filter(|s| !s.is_empty()).collect();
+        return vec![input.trim().to_string()]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect();
     }
-    
+
     input
         .split(delimiters)
         .map(|s| s.trim())

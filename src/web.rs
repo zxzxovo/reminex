@@ -241,7 +241,7 @@ async fn search_handler(
                     .iter()
                     .filter_map(|s| s.chars().next()) // Take first char of each string
                     .collect();
-                
+
                 if delim_chars.is_empty() {
                     parse_search_keywords(&params.query)
                 } else {
@@ -256,10 +256,10 @@ async fn search_handler(
 
     // Parse selected databases (support comma-separated list)
     let selected_dbs: Vec<&str> = params.selected_db.split(',').map(|s| s.trim()).collect();
-    
+
     // Collect all results from all selected databases
     let mut all_results = Vec::new();
-    
+
     for db in selected_dbs {
         match search_in_selected_database(&state.db_paths, db, &keywords, &config) {
             Ok(results) => all_results.extend(results),
