@@ -714,6 +714,121 @@
             font-weight: 600;
         }
 
+        /* Database chips container */
+        .db-chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            min-height: 36px;
+        }
+
+        .db-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            border: 2px solid transparent;
+        }
+
+        .db-chip:hover {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+
+        .db-chip.selected {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border-color: var(--md-sys-color-primary);
+        }
+
+        .db-chip-icon {
+            font-size: 16px;
+        }
+
+        /* Delimiter customization */
+        .delimiter-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            background-color: var(--md-sys-color-surface-variant);
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .delimiter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 32px;
+        }
+
+        .delimiter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+            font-size: 13px;
+            font-family: monospace;
+        }
+
+        .delimiter-chip-remove {
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0 4px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .delimiter-chip-remove:hover {
+            background-color: var(--md-sys-color-error);
+            color: var(--md-sys-color-on-error);
+        }
+
+        .delimiter-add {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .delimiter-input {
+            flex: 1;
+            max-width: 200px;
+            padding: 6px 12px;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 8px;
+            background-color: var(--md-sys-color-surface);
+            color: var(--md-sys-color-on-surface);
+            font-family: monospace;
+        }
+
+        .delimiter-add-btn {
+            padding: 6px 16px;
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+
+        .delimiter-add-btn:hover {
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+        }
+
         .tree-branch {
             color: var(--md-sys-color-outline);
             font-family: monospace;
@@ -985,11 +1100,11 @@
                 <button id="exportButton" class="icon-button" title="导出结果" disabled>📤</button>
             </div>
             <div class="options">
-                <div class="option">
-                    <label for="databaseSelect">数据库:</label>
-                    <select id="databaseSelect" class="db-select">
-                        <!-- Will be populated dynamically -->
-                    </select>
+                <div class="option" style="flex-direction: column; align-items: flex-start; width: 100%;">
+                    <label>数据库 (点击选择):</label>
+                    <div id="databaseChips" class="db-chips-container">
+                        <!-- Database chips will be populated dynamically -->
+                    </div>
                 </div>
                 <div class="option">
                     <button id="advancedToggle" class="advanced-toggle">
@@ -1049,6 +1164,21 @@
                         <input type="color" id="highlightColorPicker" title="选择高亮颜色" style="width:36px;height:28px;padding:0;border:0;background:transparent;">
                         <input type="text" id="highlightColorInput" placeholder="支持 #RRGGBB、rgb(...)、hsl(...)" class="filter-input" style="width:180px;" title="输入颜色值，例如 #ff7043、rgb(255,112,67)、hsl(14,100%,63%)">
                     </div>
+                </div>
+                <div class="delimiter-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="font-weight: 500;">自定义关键词分隔符:</label>
+                        <button id="resetDelimiters" class="secondary-button" style="padding: 4px 12px; font-size: 12px;">恢复默认</button>
+                    </div>
+                    <div class="delimiter-chips" id="delimiterChips">
+                        <!-- Delimiter chips will be shown here -->
+                    </div>
+                    <div class="delimiter-add">
+                        <input type="text" id="delimiterInput" class="delimiter-input" placeholder="输入分隔符（如 | 或 空格）" maxlength="5">
+                        <button id="addDelimiter" class="delimiter-add-btn">+ 添加</button>
+                        <span style="font-size: 12px; color: var(--md-sys-color-on-surface-variant);">提示: 输入 \t 表示制表符，输入 \s 表示空格</span>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -1149,12 +1279,26 @@
         const rootPathInput = document.getElementById('rootPathInput');
         const includeFilterInput = document.getElementById('includeFilterInput');
         const excludeFilterInput = document.getElementById('excludeFilterInput');
-        const databaseSelect = document.getElementById('databaseSelect');
+        const databaseChips = document.getElementById('databaseChips');
         const scrollButtons = document.getElementById('scrollButtons');
         const scrollToTopBtn = document.getElementById('scrollToTop');
         const scrollToBottomBtn = document.getElementById('scrollToBottom');
         const advancedToggle = document.getElementById('advancedToggle');
         const advancedOptions = document.getElementById('advancedOptions');
+        
+        // Delimiter customization
+        const delimiterChips = document.getElementById('delimiterChips');
+        const delimiterInput = document.getElementById('delimiterInput');
+        const addDelimiterBtn = document.getElementById('addDelimiter');
+        const resetDelimitersBtn = document.getElementById('resetDelimiters');
+        
+        // Database selection state
+        let availableDatabases = [];
+        let selectedDatabases = [];
+        
+        // Delimiter state (default delimiters)
+        const DEFAULT_DELIMITERS = [';', '；', ',', '，', '\t'];
+        let customDelimiters = [...DEFAULT_DELIMITERS];
         
         // History and Export
         const historyButton = document.getElementById('historyButton');
@@ -1219,6 +1363,129 @@
         });
 
         let lastSearchResults = null;
+
+        // Delimiter management functions
+        function renderDelimiterChips() {
+            delimiterChips.innerHTML = '';
+            customDelimiters.forEach((delim, index) => {
+                const chip = document.createElement('div');
+                chip.className = 'delimiter-chip';
+                
+                // Display representation
+                let displayText = delim;
+                if (delim === '\t') displayText = '\\t (制表符)';
+                else if (delim === ' ') displayText = '\\s (空格)';
+                else if (delim === '\n') displayText = '\\n (换行)';
+                
+                chip.innerHTML = `
+                    <span>${escapeHtml(displayText)}</span>
+                    <span class="delimiter-chip-remove" data-index="${index}" title="删除">×</span>
+                `;
+                delimiterChips.appendChild(chip);
+            });
+            
+            // Update placeholder in search input
+            updateSearchPlaceholder();
+        }
+
+        function updateSearchPlaceholder() {
+            const displayDelims = customDelimiters.map(d => {
+                if (d === '\t') return '\\t';
+                if (d === ' ') return '空格';
+                if (d === '\n') return '\\n';
+                return d;
+            }).join(' ');
+            searchInput.placeholder = `输入搜索关键词 (支持多个关键词，用 ${displayDelims} 分隔)...`;
+        }
+
+        function addDelimiter() {
+            let value = delimiterInput.value;
+            if (!value) return;
+            
+            // Handle escape sequences
+            if (value === '\\t') value = '\t';
+            else if (value === '\\s') value = ' ';
+            else if (value === '\\n') value = '\n';
+            
+            // Check if already exists
+            if (customDelimiters.includes(value)) {
+                alert('该分隔符已存在');
+                return;
+            }
+            
+            customDelimiters.push(value);
+            delimiterInput.value = '';
+            renderDelimiterChips();
+            saveDelimitersToStorage();
+        }
+
+        function removeDelimiter(index) {
+            if (customDelimiters.length <= 1) {
+                alert('至少需要保留一个分隔符');
+                return;
+            }
+            customDelimiters.splice(index, 1);
+            renderDelimiterChips();
+            saveDelimitersToStorage();
+        }
+
+        function resetDelimiters() {
+            if (confirm('确定要恢复为默认分隔符吗？')) {
+                customDelimiters = [...DEFAULT_DELIMITERS];
+                renderDelimiterChips();
+                saveDelimitersToStorage();
+            }
+        }
+
+        function saveDelimitersToStorage() {
+            localStorage.setItem('customDelimiters', JSON.stringify(customDelimiters));
+        }
+
+        function loadDelimitersFromStorage() {
+            const saved = localStorage.getItem('customDelimiters');
+            if (saved) {
+                try {
+                    customDelimiters = JSON.parse(saved);
+                } catch (e) {
+                    customDelimiters = [...DEFAULT_DELIMITERS];
+                }
+            }
+            renderDelimiterChips();
+        }
+
+        // Parse keywords with custom delimiters
+        function parseKeywordsWithCustomDelimiters(input) {
+            if (!input) return [];
+            
+            // Build regex pattern from custom delimiters
+            const escapedDelims = customDelimiters.map(d => {
+                // Escape special regex characters
+                return d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            });
+            const pattern = new RegExp(`[${escapedDelims.join('')}]`, 'g');
+            
+            return input.split(pattern)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+        }
+
+        // Event listeners for delimiter management
+        addDelimiterBtn.addEventListener('click', addDelimiter);
+        delimiterInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addDelimiter();
+            }
+        });
+        delimiterChips.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delimiter-chip-remove')) {
+                const index = parseInt(e.target.getAttribute('data-index'));
+                removeDelimiter(index);
+            }
+        });
+        resetDelimitersBtn.addEventListener('click', resetDelimiters);
+
+        // Initialize delimiters
+        loadDelimitersFromStorage();
 
         // Compact mode functionality
         const compactButtons = document.querySelectorAll('.compact-btn');
@@ -1300,45 +1567,100 @@
                 const response = await fetch('/api/databases');
                 const data = await response.json();
                 
-                // Clear existing options
-                databaseSelect.innerHTML = '';
+                // Store available databases
+                availableDatabases = data.databases.map(db => db.name);
                 
-                // Add database options
-                if (data.databases.length > 0) {
-                    // Add first database as default (selected)
-                    const firstOption = document.createElement('option');
-                    firstOption.value = data.databases[0].name;
-                    firstOption.textContent = data.databases[0].name;
-                    firstOption.selected = true;
-                    databaseSelect.appendChild(firstOption);
+                // Clear existing chips
+                databaseChips.innerHTML = '';
+                
+                if (availableDatabases.length > 0) {
+                    // Create chip for each database
+                    availableDatabases.forEach((dbName, index) => {
+                        const chip = document.createElement('div');
+                        chip.className = 'db-chip';
+                        chip.setAttribute('data-db-name', dbName);
+                        chip.textContent = dbName;
+                        
+                        // Select first database by default
+                        if (index === 0) {
+                            chip.classList.add('selected');
+                            selectedDatabases = [dbName];
+                        }
+                        
+                        databaseChips.appendChild(chip);
+                    });
                     
-                    // Add remaining databases
-                    for (let i = 1; i < data.databases.length; i++) {
-                        const option = document.createElement('option');
-                        option.value = data.databases[i].name;
-                        option.textContent = data.databases[i].name;
-                        databaseSelect.appendChild(option);
-                    }
-                    
-                    // Add "all" option at the end
-                    const allOption = document.createElement('option');
-                    allOption.value = 'all';
-                    allOption.textContent = '全部数据库';
-                    databaseSelect.appendChild(allOption);
+                    // Add "全部" chip
+                    const allChip = document.createElement('div');
+                    allChip.className = 'db-chip';
+                    allChip.setAttribute('data-db-name', 'all');
+                    allChip.textContent = '全部数据库';
+                    databaseChips.appendChild(allChip);
                     
                     // Show database count in title
-                    document.title = `Reminex - ${data.databases.length} 个数据库`;
+                    document.title = `Reminex - ${availableDatabases.length} 个数据库`;
                 } else {
                     // No databases found, add placeholder
-                    const option = document.createElement('option');
-                    option.value = 'all';
-                    option.textContent = '无数据库';
-                    databaseSelect.appendChild(option);
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'db-chip';
+                    placeholder.textContent = '无数据库';
+                    placeholder.style.opacity = '0.5';
+                    placeholder.style.cursor = 'default';
+                    databaseChips.appendChild(placeholder);
+                    selectedDatabases = [];
                 }
             } catch (error) {
                 console.error('Failed to load databases:', error);
             }
         }
+
+        // Handle database chip clicks
+        databaseChips.addEventListener('click', (e) => {
+            const chip = e.target.closest('.db-chip');
+            if (!chip) return;
+            
+            const dbName = chip.getAttribute('data-db-name');
+            if (!dbName) return;
+            
+            // Handle "all" selection
+            if (dbName === 'all') {
+                // Deselect all individual chips
+                databaseChips.querySelectorAll('.db-chip').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                // Select "all" chip
+                chip.classList.add('selected');
+                selectedDatabases = ['all'];
+                return;
+            }
+            
+            // For individual database selection
+            const allChip = databaseChips.querySelector('.db-chip[data-db-name="all"]');
+            if (allChip) {
+                allChip.classList.remove('selected');
+            }
+            
+            if (chip.classList.contains('selected')) {
+                // Deselect if already selected
+                chip.classList.remove('selected');
+                selectedDatabases = selectedDatabases.filter(db => db !== dbName);
+                
+                // If no database selected, select the first one
+                if (selectedDatabases.length === 0 && availableDatabases.length > 0) {
+                    const firstChip = databaseChips.querySelector('.db-chip[data-db-name]');
+                    if (firstChip) {
+                        firstChip.classList.add('selected');
+                        selectedDatabases = [firstChip.getAttribute('data-db-name')];
+                    }
+                }
+            } else {
+                // Select the chip
+                chip.classList.add('selected');
+                if (!selectedDatabases.includes(dbName)) {
+                    selectedDatabases.push(dbName);
+                }
+            }
+        });
 
         // Load databases when page loads
         loadDatabases();
@@ -1417,7 +1739,40 @@
                 document.querySelectorAll('.history-item').forEach(item => {
                     item.addEventListener('click', () => {
                         searchInput.value = item.dataset.query;
-                        databaseSelect.value = item.dataset.db;
+                        
+                        // Update database selection
+                        const historyDb = item.dataset.db;
+                        // Deselect all chips first
+                        databaseChips.querySelectorAll('.db-chip').forEach(c => {
+                            c.classList.remove('selected');
+                        });
+                        
+                        // Select the appropriate chip(s)
+                        if (historyDb && historyDb !== 'all') {
+                            // Handle comma-separated databases
+                            const dbNames = historyDb.split(',').map(s => s.trim());
+                            dbNames.forEach(dbName => {
+                                const chip = databaseChips.querySelector(`.db-chip[data-db-name="${dbName}"]`);
+                                if (chip) {
+                                    chip.classList.add('selected');
+                                }
+                            });
+                            selectedDatabases = dbNames;
+                        } else {
+                            // Select "all" chip or first database
+                            const allChip = databaseChips.querySelector('.db-chip[data-db-name="all"]');
+                            if (allChip) {
+                                allChip.classList.add('selected');
+                                selectedDatabases = ['all'];
+                            } else if (availableDatabases.length > 0) {
+                                const firstChip = databaseChips.querySelector('.db-chip');
+                                if (firstChip) {
+                                    firstChip.classList.add('selected');
+                                    selectedDatabases = [firstChip.getAttribute('data-db-name')];
+                                }
+                            }
+                        }
+                        
                         nameOnlyCheckbox.checked = item.dataset.nameOnly === 'true';
                         caseSensitiveCheckbox.checked = item.dataset.caseSensitive === 'true';
                         historyModal.classList.remove('show');
@@ -1507,6 +1862,12 @@
                 return;
             }
 
+            // Check if any database is selected
+            if (selectedDatabases.length === 0) {
+                alert('请至少选择一个数据库');
+                return;
+            }
+
             // Show loading state
             searchButton.disabled = true;
             searchButton.textContent = '搜索中...';
@@ -1516,11 +1877,17 @@
             try {
                 const params = new URLSearchParams({
                     query: query,
-                    selected_db: databaseSelect.value,
                     name_only: nameOnlyCheckbox.checked,
                     case_sensitive: caseSensitiveCheckbox.checked,
                     limit: limitInput.value
                 });
+
+                // Add selected databases
+                // Use comma-separated list for now (backend needs to be updated)
+                params.append('selected_db', selectedDatabases.join(','));
+                
+                // Add custom delimiters as JSON string
+                params.append('delimiters', JSON.stringify(customDelimiters));
 
                 // Add root_path if specified
                 const rootPath = rootPathInput.value.trim();
@@ -1549,7 +1916,7 @@
                 // 保存搜索结果用于导出
                 lastSearchResults = {
                     query: query,
-                    selected_db: databaseSelect.value,
+                    selected_db: selectedDatabases.join(','),
                     name_only: nameOnlyCheckbox.checked,
                     case_sensitive: caseSensitiveCheckbox.checked,
                     limit: parseInt(limitInput.value),

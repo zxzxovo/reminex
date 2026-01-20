@@ -33,7 +33,7 @@
 - **🔄 Incremental Updates**: Support for both full and incremental indexing modes
 - **💬 Interactive Search**: Built-in interactive search interface
 - **📋 Progress Display**: Real-time indexing progress and speed display for clear status tracking
-- **🌐 Web Interface**: Modern Web UI with tree-style results display, no command line required
+- **🌐 Web Interface**: Modern Web UI with multi-database selection, keyword highlighting, custom delimiters, and more advanced features
 - **⚙️ Database Optimization**: WAL mode + 2GB cache + batch transaction processing
 
 ---

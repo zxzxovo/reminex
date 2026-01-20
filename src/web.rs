@@ -18,7 +18,7 @@ use crate::history::{SearchHistory, SearchHistoryItem};
 use crate::indexer;
 use crate::searcher::{
     SearchConfig, SearchResult, TreeNode, build_tree, parse_search_keywords,
-    search_in_selected_database,
+    parse_search_keywords_with_delimiters, search_in_selected_database,
 };
 
 /// Web server state
@@ -46,6 +46,8 @@ pub struct SearchRequest {
     pub include_filters: Option<String>,
     #[serde(default)]
     pub exclude_filters: Option<String>,
+    #[serde(default)]
+    pub delimiters: Option<String>, // JSON string of custom delimiters
 }
 
 fn default_selected_db() -> String {
@@ -229,22 +231,49 @@ async fn search_handler(
             .unwrap_or_default(),
     };
 
-    // Parse keywords
-    let keywords = parse_search_keywords(&params.query);
+    // Parse keywords with custom delimiters if provided
+    let keywords = if let Some(delims_json) = &params.delimiters {
+        // Try to parse delimiters from JSON
+        match serde_json::from_str::<Vec<String>>(delims_json) {
+            Ok(delim_strings) => {
+                // Convert strings to chars
+                let delim_chars: Vec<char> = delim_strings
+                    .iter()
+                    .filter_map(|s| s.chars().next()) // Take first char of each string
+                    .collect();
+                
+                if delim_chars.is_empty() {
+                    parse_search_keywords(&params.query)
+                } else {
+                    parse_search_keywords_with_delimiters(&params.query, &delim_chars)
+                }
+            }
+            Err(_) => parse_search_keywords(&params.query), // Fallback to default
+        }
+    } else {
+        parse_search_keywords(&params.query)
+    };
 
-    // Perform multi-database search
-    let results =
-        match search_in_selected_database(&state.db_paths, &params.selected_db, &keywords, &config)
-        {
-            Ok(results) => results,
+    // Parse selected databases (support comma-separated list)
+    let selected_dbs: Vec<&str> = params.selected_db.split(',').map(|s| s.trim()).collect();
+    
+    // Collect all results from all selected databases
+    let mut all_results = Vec::new();
+    
+    for db in selected_dbs {
+        match search_in_selected_database(&state.db_paths, db, &keywords, &config) {
+            Ok(results) => all_results.extend(results),
             Err(e) => {
                 return Json(SearchResponse {
                     success: false,
                     results: vec![],
-                    error: Some(format!("Search failed: {}", e)),
+                    error: Some(format!("Search failed in database '{}': {}", db, e)),
                 });
             }
-        };
+        }
+    }
+
+    let results = all_results;
 
     // Group results by keyword (merge across databases if searching all)
     let mut keyword_map: std::collections::HashMap<String, Vec<SearchResult>> =

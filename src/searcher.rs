@@ -97,6 +97,36 @@ pub fn parse_search_keywords(input: &str) -> Vec<String> {
         .collect()
 }
 
+/// Parse search keywords using custom delimiters
+///
+/// # Arguments
+/// * `input` - Input string containing keywords
+/// * `delimiters` - Custom delimiter characters
+///
+/// # Returns
+/// Vector of trimmed keywords
+///
+/// # Example
+/// ```
+/// use reminex::searcher::parse_search_keywords_with_delimiters;
+///
+/// let keywords = parse_search_keywords_with_delimiters("photo|video,image", &['|', ',']);
+/// assert_eq!(keywords, vec!["photo", "video", "image"]);
+/// ```
+pub fn parse_search_keywords_with_delimiters(input: &str, delimiters: &[char]) -> Vec<String> {
+    if delimiters.is_empty() {
+        // If no delimiters, treat the whole input as a single keyword
+        return vec![input.trim().to_string()].into_iter().filter(|s| !s.is_empty()).collect();
+    }
+    
+    input
+        .split(delimiters)
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
+
 /// Apply include and exclude filters to search results.
 ///
 /// # Arguments
@@ -586,6 +616,51 @@ mod tests {
         );
 
         assert_eq!(parse_search_keywords(""), Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_parse_search_keywords_with_custom_delimiters() {
+        // Test with custom delimiter '|'
+        assert_eq!(
+            parse_search_keywords_with_delimiters("photo|video|music", &['|']),
+            vec!["photo", "video", "music"]
+        );
+
+        // Test with multiple custom delimiters
+        assert_eq!(
+            parse_search_keywords_with_delimiters("photo|video;music", &['|', ';']),
+            vec!["photo", "video", "music"]
+        );
+
+        // Test that spaces are NOT delimiters when not specified
+        assert_eq!(
+            parse_search_keywords_with_delimiters("my photo|video music", &['|']),
+            vec!["my photo", "video music"]
+        );
+
+        // Test with space as custom delimiter
+        assert_eq!(
+            parse_search_keywords_with_delimiters("photo video music", &[' ']),
+            vec!["photo", "video", "music"]
+        );
+
+        // Test with empty delimiters (should treat whole input as one keyword)
+        assert_eq!(
+            parse_search_keywords_with_delimiters("photo;video", &[]),
+            vec!["photo;video"]
+        );
+
+        // Test with whitespace trimming
+        assert_eq!(
+            parse_search_keywords_with_delimiters("  photo  |  video  ", &['|']),
+            vec!["photo", "video"]
+        );
+
+        // Test with empty input
+        assert_eq!(
+            parse_search_keywords_with_delimiters("", &['|']),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
